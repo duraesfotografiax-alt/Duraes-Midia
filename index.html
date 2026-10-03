@@ -397,7 +397,7 @@ textarea.tin{min-height:72px;resize:vertical;margin-top:8px}
       <p class="muted" id="logoEmpty" style="margin-top:10px">As logos que o administrador sobe em Biblioteca aparecem aqui para toda a equipe.</p>
       <h3>Posição</h3>
       <div class="box">
-        <label class="sl">Tamanho <input type="range" id="logoSize" min="4" max="30" step="0.5" value="9"><span class="v" id="logoSizeV">9%</span></label>
+        <label class="sl">Tamanho <input type="range" id="logoSize" min="4" max="70" step="0.5" value="9"><span class="v" id="logoSizeV">9%</span></label>
         <label class="sl">Da borda <input type="range" id="logoBottom" min="0" max="20" step="0.5" value="4.5"><span class="v" id="logoBottomV">4.5%</span></label>
       </div>
     </div>
@@ -851,8 +851,8 @@ function render(ctx, preview){
     }
   });
   const logo = st.logoId && logoImgs.get(st.logoId);
-  if (logo && logo.complete && logo.naturalWidth){
-    const lw = W * st.logoSize / 100, lh = lw * logo.naturalHeight / logo.naturalWidth;
+  if (logo && logo.width){
+    const lw = W * st.logoSize / 100, lh = lw * logo.height / logo.width;
     ctx.drawImage(logo, (W - lw) / 2, H - H * st.logoBottom / 100 - lh, lw, lh);
   }
   drawText(ctx, W, H, st.tx);
@@ -1213,9 +1213,25 @@ function bindRange(id, fmt, fn){
 }
 bindRange("logoSize", v => v + "%", v => { st.logoSize = v; draw(); });
 bindRange("logoBottom", v => v + "%", v => { st.logoBottom = v; draw(); });
+function trimLogo(im){
+  try{
+    const w = im.naturalWidth || im.width, h = im.naturalHeight || im.height;
+    const c = document.createElement("canvas"); c.width = w; c.height = h;
+    const ctx = c.getContext("2d", { willReadFrequently: true }); ctx.drawImage(im, 0, 0);
+    const d = ctx.getImageData(0, 0, w, h).data;
+    let x0 = w, y0 = h, x1 = -1, y1 = -1;
+    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++){
+      if (d[(y * w + x) * 4 + 3] > 10){ if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; }
+    }
+    if (x1 < 0) return im;
+    const t = document.createElement("canvas"); t.width = x1 - x0 + 1; t.height = y1 - y0 + 1;
+    t.getContext("2d").drawImage(c, x0, y0, t.width, t.height, 0, 0, t.width, t.height);
+    return t;
+  }catch(e){ return im; }
+}
 function setLogos(list){
   st.logos = list;
-  list.forEach(l => { if (!logoImgs.has(l.id)){ const im = new Image(); im.crossOrigin = "anonymous"; im.onload = () => { draw(); drawArt(); }; im.src = logoSrc(l); logoImgs.set(l.id, im); } });
+  list.forEach(l => { if (!logoImgs.has(l.id)){ logoImgs.set(l.id, null); const im = new Image(); im.crossOrigin = "anonymous"; im.onload = () => { logoImgs.set(l.id, trimLogo(im)); draw(); drawArt(); }; im.src = logoSrc(l); } });
   if (st.logoId && !list.find(l => l.id === st.logoId)) st.logoId = null;
   if (!st.logoId && !st._logoTouched){
     const def = list.find(l => l.id === st.cfg.defaultLogoId) || list[0];
