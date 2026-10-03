@@ -1203,7 +1203,7 @@ function renderLogoChips(){
   st.logos.forEach(l => {
     const b = document.createElement("button"); b.className = "chip"; b.setAttribute("aria-pressed", st.logoId === l.id);
     b.innerHTML = '<img alt=""><span></span>'; b.querySelector("img").src = logoSrc(l); b.querySelector("span").textContent = l.name;
-    b.addEventListener("click", () => { st.logoId = l.id; renderLogoChips(); draw(); });
+    b.addEventListener("click", () => { st.logoId = l.id; applyLogoPos(); renderLogoChips(); draw(); });
     box.appendChild(b);
   });
 }
@@ -1211,15 +1211,41 @@ function bindRange(id, fmt, fn){
   const el = $("#" + id), v = $("#" + id + "V");
   el.addEventListener("input", () => { v.textContent = fmt(+el.value); fn(+el.value); });
 }
-bindRange("logoSize", v => v + "%", v => { st.logoSize = v; draw(); });
-bindRange("logoBottom", v => v + "%", v => { st.logoBottom = v; draw(); });
+bindRange("logoSize", v => v + "%", v => { st.logoSize = v; draw(); saveLogoPos(); });
+bindRange("logoBottom", v => v + "%", v => { st.logoBottom = v; draw(); saveLogoPos(); });
+/* Cada logo lembra o próprio tamanho e posição */
+function setLogoSliders(){
+  $("#logoSize").value = st.logoSize; $("#logoSizeV").textContent = st.logoSize + "%";
+  $("#logoBottom").value = st.logoBottom; $("#logoBottomV").textContent = st.logoBottom + "%";
+}
+function applyLogoPos(){
+  if (!st.logoId) return;
+  const loc = LS.get("logoPos", {})[st.logoId];
+  const l = st.logos.find(x => x.id === st.logoId);
+  const pos = loc || (l && l.size != null ? { size: +l.size, bottom: +(l.bottom != null ? l.bottom : 4.5) } : null);
+  if (pos){ st.logoSize = pos.size; st.logoBottom = pos.bottom; }
+  setLogoSliders();
+}
+let logoPosTimer = 0;
+function saveLogoPos(){
+  const id = st.logoId; if (!id) return;
+  const all = LS.get("logoPos", {}); all[id] = { size: st.logoSize, bottom: st.logoBottom }; LS.set("logoPos", all);
+  if (!st.isAdmin || !SB) return;
+  clearTimeout(logoPosTimer);
+  const size = st.logoSize, bottom = st.logoBottom;
+  logoPosTimer = setTimeout(async () => {
+    const r = await SB.from("logos").update({ size, bottom }).eq("id", id).select("id");
+    const l = st.logos.find(x => x.id === id);
+    if (!r.error && r.data && r.data.length && l){ l.size = size; l.bottom = bottom; }
+  }, 700);
+}
 function setLogos(list){
   st.logos = list;
   list.forEach(l => { if (!logoImgs.has(l.id)){ logoImgs.set(l.id, null); const im = new Image(); im.crossOrigin = "anonymous"; im.onload = () => { logoImgs.set(l.id, im); draw(); drawArt(); }; im.src = logoSrc(l); } });
   if (st.logoId && !list.find(l => l.id === st.logoId)) st.logoId = null;
   if (!st.logoId && !st._logoTouched){
     const def = list.find(l => l.id === st.cfg.defaultLogoId) || list[0];
-    if (def) st.logoId = def.id;
+    if (def){ st.logoId = def.id; applyLogoPos(); }
   }
   renderLogoChips(); renderLogoLib(); draw();
 }
@@ -1824,7 +1850,7 @@ function errHint(e){
   return m ? " (" + m + ")" : "";
 }
 async function loadLogos(){
-  const r = await SB.from("logos").select("id,name,path,created_at").order("created_at");
+  const r = await SB.from("logos").select("*").order("created_at");
   if (!r.error) setLogos(r.data);
 }
 async function loadLayouts(){
@@ -1838,7 +1864,7 @@ async function loadCfg(){
     st.cfg.bgAssetId = r.data.bg_path || null; st.cfg.defaultLogoId = r.data.default_logo_id || null;
   }
   applyCfg(); renderLogoLib();
-  if (!st._logoTouched && st.cfg.defaultLogoId && st.logos.find(l => l.id === st.cfg.defaultLogoId)){ st.logoId = st.cfg.defaultLogoId; renderLogoChips(); draw(); }
+  if (!st._logoTouched && st.cfg.defaultLogoId && st.logos.find(l => l.id === st.cfg.defaultLogoId)){ st.logoId = st.cfg.defaultLogoId; applyLogoPos(); renderLogoChips(); draw(); }
 }
 async function loadAll(){ await loadLogos(); await Promise.all([loadLayouts(), loadCfg(), loadPresets(), loadSaved(), loadDone()]); if (st.isAdmin) loadTeam(false); }
 
