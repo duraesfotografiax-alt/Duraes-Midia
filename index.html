@@ -202,6 +202,19 @@ input[type=range]:disabled{opacity:.4}
 .toolbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;justify-content:space-between;padding:10px;border-radius:16px;background:var(--panel2);margin-top:12px}
 .toolbar .count{font-weight:800;font-size:14px;padding-left:4px}
 [hidden]{display:none!important}
+@media (max-width:899px){.stage canvas{max-height:56vh;width:auto;max-width:100%;margin:0 auto}}
+.zbar{display:flex;align-items:center;gap:6px;margin-top:10px;padding:6px;border-radius:14px;background:var(--panel2)}
+.zbar input{flex:1;min-width:60px}
+.zb{width:40px;height:40px;border-radius:12px;border:1.5px solid var(--line);background:var(--panel);font-size:19px;font-weight:800;cursor:pointer;flex:none;display:grid;place-items:center;color:var(--text)}
+.zb:active{transform:scale(.94)}
+.dayh{grid-column:1/-1;font-size:12px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:10px 2px 0}
+.card .by{display:block;font-size:11px;font-weight:600;color:var(--muted);line-height:1.2}
+.libgrid2{display:grid;gap:18px}
+@media (min-width:700px){.libgrid2{grid-template-columns:1fr 1fr}}
+textarea.tin{min-height:72px;resize:vertical;margin-top:8px}
+.chips.small{grid-template-columns:repeat(auto-fill,minmax(96px,1fr))}
+.chip.txt{min-height:44px}
+.sw{width:26px;height:26px;border-radius:50%;border:2px solid var(--line);display:block}
 .auth{position:fixed;inset:0;z-index:40;background:radial-gradient(120% 80% at 50% 0%,#2a1606 0%,#141414 55%);color:#f4f2ef;overflow:auto;display:flex;align-items:center;justify-content:center;padding:calc(24px + env(safe-area-inset-top,0px)) 18px calc(24px + env(safe-area-inset-bottom,0px))}
 .auth .card2{width:100%;max-width:380px;animation:rise .35s ease}
 .auth .logo{display:block;height:120px;width:auto;margin:0 auto 10px}
@@ -304,7 +317,14 @@ input[type=range]:disabled{opacity:.4}
 <section class="view on split" id="v-mont">
   <div class="stage">
     <canvas id="pv" width="1080" height="1350" aria-label="Prévia da montagem"></canvas>
-    <p class="hint" id="pvHint"><svg class="i"><use href="#i-hand"/></svg>Toque num espaço para selecionar e arraste para enquadrar.</p>
+    <div class="zbar" id="zbar" hidden>
+      <button class="zb" id="zOut" aria-label="Diminuir zoom">−</button>
+      <input type="range" id="zoom" min="1" max="4" step="0.01" value="1" aria-label="Zoom da foto">
+      <button class="zb" id="zIn" aria-label="Aumentar zoom">+</button>
+      <button class="zb" id="centerBtn" aria-label="Centralizar" title="Centralizar">⟲</button>
+      <button class="zb" id="clearSlot" aria-label="Tirar foto do espaço" title="Tirar foto do espaço">✕</button>
+    </div>
+    <p class="hint" id="pvHint"><svg class="i"><use href="#i-hand"/></svg>Toque num espaço, arraste para enquadrar e use dois dedos para dar zoom.</p>
   </div>
   <div class="panel">
     <div class="seg" role="tablist">
@@ -312,6 +332,7 @@ input[type=range]:disabled{opacity:.4}
       <button data-pane="p-modelo" aria-selected="false"><span class="st">PASSO 2</span>Modelo</button>
       <button data-pane="p-ajustes" aria-selected="false"><span class="st">PASSO 3</span>Ajustes</button>
       <button data-pane="p-logo" aria-selected="false"><span class="st">PASSO 4</span>Logo</button>
+      <button data-pane="p-texto" aria-selected="false"><span class="st">PASSO 5</span>Texto</button>
     </div>
 
     <div class="pane on" id="p-fotos">
@@ -326,16 +347,6 @@ input[type=range]:disabled{opacity:.4}
       </div>
       <p class="ai" id="aiStatus"></p>
       <div id="tray" class="tray"></div>
-      <div id="frameGroup">
-        <h3>Enquadramento</h3>
-        <div class="box">
-          <label class="sl">Zoom <input type="range" id="zoom" min="1" max="3" step="0.01" value="1"><span class="v" id="zoomV">1.0×</span></label>
-        </div>
-        <div class="row" style="margin-top:8px">
-          <button class="btn small" id="centerBtn">Centralizar</button>
-          <button class="btn small" id="clearSlot">Tirar foto do espaço</button>
-        </div>
-      </div>
     </div>
 
     <div class="pane" id="p-modelo">
@@ -350,6 +361,8 @@ input[type=range]:disabled{opacity:.4}
 
     <div class="pane" id="p-ajustes">
       <p class="ai" id="adjTarget" style="margin-top:0">Selecione um espaço com foto para editar.</p>
+      <h3 style="margin-top:14px">Predefinições da equipe</h3>
+      <div class="chips small" id="presetChips"></div>
       <div class="row" style="margin:10px 0 4px">
         <button class="btn small primary" id="autoAdj"><svg class="i"><use href="#i-spark"/></svg>Auto</button>
         <button class="btn small" id="resetAdj">Zerar</button>
@@ -370,16 +383,45 @@ input[type=range]:disabled{opacity:.4}
         </div>
       </div>
       <p class="muted">Toque na curva para criar um ponto e arraste. Toque duas vezes num controle para zerar.</p>
+      <h3>Salvar como predefinição</h3>
+      <div class="row">
+        <input class="tin" id="presetName" placeholder="Nome (ex.: Filtro da igreja)" style="flex:1;min-width:170px">
+        <button class="btn soft" id="presetSave"><svg class="i"><use href="#i-check"/></svg>Salvar ajustes</button>
+      </div>
+      <p class="muted">Salva os ajustes da foto selecionada para toda a equipe usar com um toque.</p>
     </div>
 
     <div class="pane" id="p-logo">
       <h3>Marca d'água</h3>
       <div class="chips" id="logoChips"></div>
-      <p class="muted" id="logoEmpty" style="margin-top:10px">Suba as logos em Biblioteca. Elas ficam salvas para toda a equipe.</p>
+      <p class="muted" id="logoEmpty" style="margin-top:10px">As logos que o administrador sobe em Biblioteca aparecem aqui para toda a equipe.</p>
       <h3>Posição</h3>
       <div class="box">
         <label class="sl">Tamanho <input type="range" id="logoSize" min="4" max="30" step="0.5" value="9"><span class="v" id="logoSizeV">9%</span></label>
         <label class="sl">Da borda <input type="range" id="logoBottom" min="0" max="20" step="0.5" value="4.5"><span class="v" id="logoBottomV">4.5%</span></label>
+      </div>
+    </div>
+
+    <div class="pane" id="p-texto">
+      <label class="field"><span>Texto na imagem</span><textarea id="txIn" placeholder="Ex.: Reunião da Prosperidade"></textarea></label>
+      <div class="row">
+        <button class="btn small" id="txDate">+ Data de hoje</button>
+        <button class="btn small" id="txWeek">+ Dia da semana</button>
+        <button class="btn small" id="txClear">Limpar</button>
+      </div>
+      <h3>Cor</h3>
+      <div class="chips" id="txColors"></div>
+      <h3>Estilo</h3>
+      <div class="chips" id="txStyles"></div>
+      <h3>Posição</h3>
+      <div class="row" style="margin-bottom:8px">
+        <button class="btn small" data-ty="9">Em cima</button>
+        <button class="btn small" data-ty="50">No meio</button>
+        <button class="btn small" data-ty="80">Embaixo</button>
+      </div>
+      <div class="box">
+        <label class="sl">Tamanho <input type="range" id="txSize" min="24" max="160" value="64"><span class="v" id="txSizeV">64</span></label>
+        <label class="sl">Altura <input type="range" id="txY" min="3" max="97" value="9"><span class="v" id="txYV">9%</span></label>
       </div>
     </div>
   </div>
@@ -389,30 +431,45 @@ input[type=range]:disabled{opacity:.4}
 <section class="view split" id="v-arte">
   <div class="stage">
     <canvas id="artPv" width="1080" height="1350" aria-label="Prévia da arte do dia"></canvas>
+    <p class="hint"><svg class="i"><use href="#i-hand"/></svg>Arraste a arte para enquadrar e use dois dedos para dar zoom.</p>
   </div>
   <div class="panel">
     <div class="ptitle"><span class="ic"><svg class="i"><use href="#i-art"/></svg></span><h2>Arte do dia</h2></div>
-    <p class="lead">Sobe a arte que chegou de São Paulo. A foto da igreja e o endereço entram sozinhos.</p>
+    <p class="lead">Sobe a arte que chegou de São Paulo. Ela preenche a imagem inteira e o endereço entra numa faixa por cima.</p>
+    <label class="btn primary filebtn big" style="width:100%"><svg class="i"><use href="#i-plus"/></svg>Escolher arte<input id="artIn" type="file" accept="image/*"></label>
+
+    <h3>Proporção</h3>
+    <div class="chips" id="artFmtChips"></div>
+    <p class="muted" id="artFmtNote" style="margin-top:8px"></p>
+    <div class="box"><label class="sl">Zoom <input type="range" id="artZoom" min="1" max="4" step="0.01" value="1"><span class="v" id="artZoomV">1.0×</span></label></div>
+
+    <h3>Endereço</h3>
+    <div class="chips small" id="addrChips"></div>
+    <label class="field"><span>Endereço desta arte</span><textarea id="artAddr" class="tin" placeholder="Rua, número, bairro, cidade"></textarea></label>
     <div class="row">
-      <label class="btn primary filebtn wide"><svg class="i"><use href="#i-plus"/></svg>Escolher arte<input id="artIn" type="file" accept="image/*"></label>
-      <label class="btn filebtn wide">Outro fundo só hoje<input id="artBgIn" type="file" accept="image/*"></label>
+      <input class="tin" id="addrName" placeholder="Nome (ex.: Sede)" style="flex:1;min-width:140px">
+      <button class="btn small" id="addrSave">Salvar endereço</button>
+    </div>
+
+    <h3>Horários</h3>
+    <div class="chips small" id="hoursChips"></div>
+    <label class="field"><span>Horários desta arte (um por linha)</span><textarea id="artHours" class="tin" placeholder="Domingo: 7h, 9h30, 18h"></textarea></label>
+    <div class="row">
+      <input class="tin" id="hoursName" placeholder="Nome (ex.: Domingo)" style="flex:1;min-width:140px">
+      <button class="btn small" id="hoursSave">Salvar horários</button>
+    </div>
+
+    <h3>Faixa do endereço</h3>
+    <div class="chips" id="bandPos"></div>
+    <div class="chips" id="bandBg" style="margin-top:8px"></div>
+    <div class="box" style="margin-top:8px">
+      <label class="sl">Fundo <input type="range" id="bandOp" min="20" max="100" value="80"><span class="v" id="bandOpV">80%</span></label>
+      <label class="sl">Texto <input type="range" id="txtSize" min="18" max="60" value="32"><span class="v" id="txtSizeV">32</span></label>
+    </div>
+    <div class="row" style="margin-top:10px">
+      <label class="btn filebtn small">Outra foto de fundo só hoje<input id="artBgIn" type="file" accept="image/*"></label>
     </div>
     <p class="muted" id="artBgNote"></p>
-    <h3>Fundo</h3>
-    <div class="box">
-      <label class="sl">Visibilidade <input type="range" id="bgOp" min="0" max="100" value="35"><span class="v" id="bgOpV">35%</span></label>
-      <label class="sl">Desfoque <input type="range" id="bgBlur" min="0" max="30" value="8"><span class="v" id="bgBlurV">8</span></label>
-    </div>
-    <h3>Arte</h3>
-    <div class="box">
-      <label class="sl">Tamanho <input type="range" id="artSize" min="40" max="100" value="86"><span class="v" id="artSizeV">86%</span></label>
-      <label class="sl">Altura <input type="range" id="artY" min="0" max="40" value="6"><span class="v" id="artYV">6%</span></label>
-    </div>
-    <h3>Endereço e horários</h3>
-    <label class="field"><span>Endereço</span><input type="text" id="artAddr"></label>
-    <label class="field"><span>Horários (um por linha)</span><textarea id="artHours"></textarea></label>
-    <div class="box"><label class="sl">Texto <input type="range" id="txtSize" min="20" max="56" value="34"><span class="v" id="txtSizeV">34</span></label></div>
-    <p class="muted">Vem da Biblioteca. Mudar aqui vale só para esta arte.</p>
   </div>
 </section>
 
@@ -420,7 +477,8 @@ input[type=range]:disabled{opacity:.4}
 <section class="view" id="v-done">
   <div class="panel">
     <div class="ptitle"><span class="ic"><svg class="i"><use href="#i-stack"/></svg></span><h2>Prontas para postar</h2></div>
-    <p class="lead">Toque nas imagens para marcar. A ordem aqui é a ordem do carrossel.</p>
+    <p class="lead">Ficam salvas na nuvem para toda a equipe. Toque nas imagens para marcar.</p>
+    <div class="chips small" id="doneFilter"></div>
     <div class="toolbar">
       <span class="count" id="selInfo"></span>
       <div class="row">
@@ -430,12 +488,12 @@ input[type=range]:disabled{opacity:.4}
       </div>
     </div>
     <div class="row" style="margin-top:10px">
+      <button class="btn soft big wide" id="shareSel" hidden><svg class="i"><use href="#i-hand"/></svg>Enviar no WhatsApp</button>
       <button class="btn primary big wide" id="oneSel"><svg class="i"><use href="#i-dl"/></svg>Baixar uma por uma</button>
       <button class="btn big wide" id="zipSel"><svg class="i"><use href="#i-zip"/></svg>Baixar em ZIP</button>
-      <button class="btn soft big wide" id="shareSel" hidden><svg class="i"><use href="#i-hand"/></svg>Enviar no WhatsApp</button>
     </div>
     <div class="done" id="doneGrid"></div>
-    <div class="empty" id="doneEmpty" style="margin-top:14px">Nenhuma montagem ainda. Monte o post e toque em <strong>Adicionar à lista</strong>.</div>
+    <div class="empty" id="doneEmpty" style="margin-top:14px">Nada por aqui ainda. Monte o post e toque em <strong>Adicionar à lista</strong>.</div>
   </div>
 </section>
 
@@ -465,15 +523,39 @@ input[type=range]:disabled{opacity:.4}
   </div>
 
   <div class="panel">
-    <div class="ptitle"><span class="ic"><svg class="i"><use href="#i-pin"/></svg></span><h2>Igreja</h2></div>
-    <p class="lead">Usados na Arte do dia.</p>
-    <label class="field"><span>Endereço</span><input type="text" id="cfgAddr" placeholder="Rua, número, bairro, cidade"></label>
-    <label class="field"><span>Horários das reuniões (um por linha)</span><textarea id="cfgHours" placeholder="Domingo: 7h, 9h30, 18h&#10;Segunda a sábado: 7h, 10h, 15h, 19h30"></textarea></label>
+    <div class="ptitle"><span class="ic"><svg class="i"><use href="#i-photo"/></svg></span><h2>Foto da igreja</h2></div>
+    <p class="lead">Aparece no fundo da faixa de endereço da Arte do dia.</p>
     <div class="row">
-      <button class="btn primary" id="cfgSave"><svg class="i"><use href="#i-check"/></svg>Salvar</button>
-      <label class="btn filebtn"><svg class="i"><use href="#i-photo"/></svg>Foto da igreja<input id="bgIn" type="file" accept="image/*"></label>
+      <label class="btn primary filebtn"><svg class="i"><use href="#i-plus"/></svg>Subir foto da igreja<input id="bgIn" type="file" accept="image/*"></label>
     </div>
     <img id="bgPrev" class="bgprev" alt="Foto da igreja salva" hidden>
+  </div>
+
+  <div class="panel full">
+    <div class="ptitle"><span class="ic"><svg class="i"><use href="#i-pin"/></svg></span><h2>Endereços e horários salvos</h2></div>
+    <p class="lead">Ficam salvos para toda a equipe e aparecem na Arte do dia para escolher com um toque.</p>
+    <div class="libgrid2">
+      <div>
+        <h3>Endereços</h3>
+        <input class="tin" id="libAddrName" placeholder="Nome (ex.: Sede, Templo novo)">
+        <textarea class="tin" id="libAddrText" placeholder="Rua, número, bairro, cidade"></textarea>
+        <button class="btn small primary" id="libAddrAdd" style="margin-top:8px">Salvar endereço</button>
+        <div id="addrList"></div>
+      </div>
+      <div>
+        <h3>Horários</h3>
+        <input class="tin" id="libHoursName" placeholder="Nome (ex.: Domingo, Semana)">
+        <textarea class="tin" id="libHoursText" placeholder="Um horário por linha"></textarea>
+        <button class="btn small primary" id="libHoursAdd" style="margin-top:8px">Salvar horários</button>
+        <div id="hoursList"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel full">
+    <div class="ptitle"><span class="ic"><svg class="i"><use href="#i-sl"/></svg></span><h2>Predefinições de edição</h2></div>
+    <p class="lead">Criadas na aba Ajustes da montagem. Ficam disponíveis para toda a equipe.</p>
+    <div id="presetList"></div>
   </div>
 
   <div class="panel full">
@@ -578,22 +660,42 @@ const WORK = 1800;
 function loadImage(src){
   return new Promise((res, rej) => { const i = new Image(); if (/^https?:/.test(src)) i.crossOrigin = "anonymous"; i.onload = () => res(i); i.onerror = rej; i.src = src; });
 }
-async function decodeFile(file){
-  const url = URL.createObjectURL(file);
+let heicLib = null;
+function loadHeicLib(){
+  if (window.heic2any) return Promise.resolve();
+  if (!heicLib) heicLib = new Promise((res, rej) => {
+    const s = document.createElement("script");
+    s.src = "https://cdn.jsdelivr.net/npm/heic2any@0.0.4/dist/heic2any.min.js";
+    s.onload = res; s.onerror = () => { heicLib = null; rej(new Error("heic")); };
+    document.head.appendChild(s);
+  });
+  return heicLib;
+}
+const isHeic = f => /hei[cf]/i.test(f.type || "") || /\.(heic|heif)$/i.test(f.name || "");
+async function decodeBlob(blob){
+  const url = URL.createObjectURL(blob);
   try{ return await loadImage(url); }
-  catch(e){ if (window.createImageBitmap) return await createImageBitmap(file); throw e; }
+  catch(e){ if (window.createImageBitmap) return await createImageBitmap(blob); throw e; }
   finally{ setTimeout(() => URL.revokeObjectURL(url), 1000); }
 }
-async function fileToWork(file){
-  {
-    const img = await decodeFile(file);
-    if (!img.naturalWidth){ img.naturalWidth = img.width; img.naturalHeight = img.height; }
-    const s = Math.min(1, WORK / Math.max(img.naturalWidth, img.naturalHeight));
-    const c = document.createElement("canvas");
-    c.width = Math.round(img.naturalWidth * s); c.height = Math.round(img.naturalHeight * s);
-    c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
-    return c;
+async function decodeFile(file){
+  try{ return await decodeBlob(file); }
+  catch(e){
+    if (!isHeic(file)) throw e;
+    await loadHeicLib();
+    let out = await window.heic2any({ blob: file, toType: "image/jpeg", quality: 0.92 });
+    if (Array.isArray(out)) out = out[0];
+    return await decodeBlob(out);
   }
+}
+async function fileToWork(file){
+  const img = await decodeFile(file);
+  const iw = img.naturalWidth || img.width, ih = img.naturalHeight || img.height;
+  const s = Math.min(1, WORK / Math.max(iw, ih));
+  const c = document.createElement("canvas");
+  c.width = Math.round(iw * s); c.height = Math.round(ih * s);
+  c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
+  return c;
 }
 function defaultAdj(){
   return { exposure: 0, brightness: 0, contrast: 0, highlights: 0, shadows: 0, whites: 0, blacks: 0,
@@ -607,6 +709,7 @@ $("#fileIn").addEventListener("change", async e => {
   let bad = 0, badType = "";
   for (const f of files){
     try{
+      if (isHeic(f)) stt.textContent = "Convertendo foto do iPhone (HEIC)…";
       const work = await fileToWork(f);
       const tc = document.createElement("canvas");
       const ts = 240 / Math.max(work.width, work.height);
@@ -615,7 +718,7 @@ $("#fileIn").addEventListener("change", async e => {
       st.photos.push({ id: uid(), name: f.name, work, thumb: tc.toDataURL("image/jpeg", .8), adj: defaultAdj(), proc: null, procKey: "" });
     }catch(err){ bad++; badType = f.type || f.name.split(".").pop(); }
   }
-  stt.textContent = bad ? (files.length - bad) + " foto(s) abertas, " + bad + " não abriram (tipo: " + badType + "). Se for HEIC, mude a câmera para JPG ou exporte como JPG." : files.length + " foto(s) carregadas.";
+  stt.textContent = bad ? (files.length - bad) + " foto(s) abertas, " + bad + " não abriram (tipo: " + badType + "). Tente exportar essas fotos como JPG." : files.length + " foto(s) carregadas.";
   if (st.slots.every(s => !s.photoId)) autoFill();
   renderTray(); draw();
 });
@@ -752,6 +855,7 @@ function render(ctx, preview){
     const lw = W * st.logoSize / 100, lh = lw * logo.naturalHeight / logo.naturalWidth;
     ctx.drawImage(logo, (W - lw) / 2, H - H * st.logoBottom / 100 - lh, lw, lh);
   }
+  drawText(ctx, W, H, st.tx);
   if (preview && cs[st.sel] && cs.length > 1){
     const c = cs[st.sel]; ctx.strokeStyle = "#2b7cff"; ctx.lineWidth = 8;
     ctx.strokeRect(c.x + 4, c.y + 4, c.w - 8, c.h - 8);
@@ -849,44 +953,123 @@ $("#aiPick").addEventListener("click", async () => {
   }finally{ btn.disabled = false; }
 });
 
-/* ---------- Preview interaction (select + pan + wheel zoom) ---------- */
-(() => {
-  const cv = $("#pv"); let drag = null;
-  const toCanvas = e => { const r = cv.getBoundingClientRect(); return { x: (e.clientX - r.left) * cv.width / r.width, y: (e.clientY - r.top) * cv.height / r.height }; };
+/* ---------- Pan, pinça e zoom ---------- */
+function attachPanZoom(cv, pick, onChange){
+  const pts = new Map(); let g = null;
+  const toC = e => { const r = cv.getBoundingClientRect(); return { x: (e.clientX - r.left) * cv.width / r.width, y: (e.clientY - r.top) * cv.height / r.height }; };
+  const pan = (t, dx, dy) => {
+    const { cell, slot, img } = t;
+    const sc = Math.max(cell.w / img.width, cell.h / img.height) * slot.zoom;
+    const sx = img.width * sc - cell.w, sy = img.height * sc - cell.h;
+    if (sx > 1) slot.ox = clamp(slot.ox - 2 * dx / sx, -1, 1);
+    if (sy > 1) slot.oy = clamp(slot.oy - 2 * dy / sy, -1, 1);
+  };
   cv.addEventListener("pointerdown", e => {
-    const p = toCanvas(e), cs = cells();
-    const i = cs.findIndex(c => p.x >= c.x && p.x < c.x + c.w && p.y >= c.y && p.y < c.y + c.h);
-    if (i < 0) return;
-    if (st.sel !== i){ st.sel = i; draw(); syncAdjUI(); }
-    cv.setPointerCapture(e.pointerId);
-    drag = { x: p.x, y: p.y, i };
+    const p = toC(e); pts.set(e.pointerId, p);
+    try{ cv.setPointerCapture(e.pointerId); }catch(_){}
+    if (pts.size === 1){ const t = pick(p); g = t ? { t, last: p, dist: 0 } : null; }
+    else if (pts.size === 2 && g){ const [a, b] = [...pts.values()]; g.dist = Math.hypot(a.x - b.x, a.y - b.y) || 1; g.z0 = g.t.slot.zoom; }
   });
   cv.addEventListener("pointermove", e => {
-    if (!drag) return;
-    const slot = st.slots[drag.i], ph = st.photos.find(q => q.id === slot.photoId);
-    if (!ph) return;
-    const p = toCanvas(e), c = cells()[drag.i];
-    const sc = Math.max(c.w / ph.work.width, c.h / ph.work.height) * slot.zoom;
-    const sx = ph.work.width * sc - c.w, sy = ph.work.height * sc - c.h;
-    if (sx > 1) slot.ox = clamp(slot.ox - 2 * (p.x - drag.x) / sx, -1, 1);
-    if (sy > 1) slot.oy = clamp(slot.oy - 2 * (p.y - drag.y) / sy, -1, 1);
-    drag.x = p.x; drag.y = p.y; draw();
+    if (!pts.has(e.pointerId)) return;
+    const p = toC(e); pts.set(e.pointerId, p);
+    if (!g) return;
+    if (pts.size >= 2 && g.dist){
+      const [a, b] = [...pts.values()];
+      g.t.slot.zoom = clamp(g.z0 * Math.hypot(a.x - b.x, a.y - b.y) / g.dist, 1, 4);
+      onChange(); return;
+    }
+    pan(g.t, p.x - g.last.x, p.y - g.last.y); g.last = p; onChange();
   });
-  const end = () => { drag = null; };
-  cv.addEventListener("pointerup", end); cv.addEventListener("pointercancel", end);
+  const up = e => {
+    pts.delete(e.pointerId);
+    if (!pts.size) g = null;
+    else if (g){ g.last = [...pts.values()][0]; g.dist = 0; }
+  };
+  cv.addEventListener("pointerup", up); cv.addEventListener("pointercancel", up);
   cv.addEventListener("wheel", e => {
-    const s = st.slots[st.sel]; if (!s || !s.photoId) return;
-    e.preventDefault(); s.zoom = clamp(s.zoom * (e.deltaY < 0 ? 1.05 : 1 / 1.05), 1, 3); draw();
+    const t = pick(toC(e)); if (!t) return;
+    e.preventDefault(); t.slot.zoom = clamp(t.slot.zoom * (e.deltaY < 0 ? 1.06 : 1 / 1.06), 1, 4); onChange();
   }, { passive: false });
-})();
+}
+attachPanZoom($("#pv"), p => {
+  const cs = cells();
+  const i = cs.findIndex(c => p.x >= c.x && p.x < c.x + c.w && p.y >= c.y && p.y < c.y + c.h);
+  if (i < 0) return null;
+  if (st.sel !== i){ st.sel = i; draw(); syncAdjUI(); }
+  const slot = st.slots[i], ph = slot && st.photos.find(q => q.id === slot.photoId);
+  return ph ? { cell: cs[i], slot, img: ph.work } : null;
+}, () => draw());
 function syncFrameControls(){
   const s = st.slots[st.sel];
+  $("#zbar").hidden = !(s && s.photoId);
   $("#zoom").value = s ? s.zoom : 1;
-  $("#zoomV").textContent = (s ? s.zoom : 1).toFixed(1) + "×";
 }
+const zoomBy = f => { const s = st.slots[st.sel]; if (s && s.photoId){ s.zoom = clamp(s.zoom * f, 1, 4); draw(); } };
 $("#zoom").addEventListener("input", e => { const s = st.slots[st.sel]; if (s){ s.zoom = +e.target.value; draw(); } });
+$("#zIn").addEventListener("click", () => zoomBy(1.15));
+$("#zOut").addEventListener("click", () => zoomBy(1 / 1.15));
 $("#centerBtn").addEventListener("click", () => { const s = st.slots[st.sel]; if (s){ s.ox = 0; s.oy = 0; s.zoom = 1; draw(); } });
 $("#clearSlot").addEventListener("click", () => { const s = st.slots[st.sel]; if (s){ s.photoId = null; draw(); syncAdjUI(); } });
+
+/* ---------- Texto na montagem ---------- */
+const DIAS = ["Domingo", "Segunda-feira", "Terça-feira", "Quarta-feira", "Quinta-feira", "Sexta-feira", "Sábado"];
+const MESES = ["janeiro", "fevereiro", "março", "abril", "maio", "junho", "julho", "agosto", "setembro", "outubro", "novembro", "dezembro"];
+st.tx = { text: "", size: 64, y: 9, color: "#ffffff", style: "sombra" };
+const TX_COLORS = [["#ffffff", "Branco"], ["#111111", "Preto"], ["#d4262e", "Vermelho"], ["#d9b45a", "Dourado"]];
+const TX_STYLES = [["sombra", "Sombra"], ["faixa", "Faixa"], ["contorno", "Contorno"], ["nada", "Simples"]];
+function roundRect(ctx, x, y, w, h, r){
+  ctx.beginPath(); ctx.moveTo(x + r, y); ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r);
+  ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath();
+}
+function drawText(ctx, W, H, tx){
+  const t = (tx.text || "").trim(); if (!t) return;
+  const size = tx.size * W / 1080;
+  ctx.save();
+  ctx.font = "800 " + size + "px Archivo, sans-serif";
+  const lines = wrapLines(ctx, t, W * .86);
+  const lh = size * 1.15, bh = lines.length * lh;
+  const top = clamp(H * tx.y / 100 - bh / 2, size * .4, H - bh - size * .4);
+  ctx.textAlign = "center"; ctx.textBaseline = "top";
+  const dark = tx.color === "#111111";
+  if (tx.style === "faixa"){
+    const mw = Math.max(...lines.map(l => ctx.measureText(l).width)), px = size * .55, py = size * .32;
+    ctx.fillStyle = dark ? "rgba(255,255,255,.8)" : "rgba(0,0,0,.55)";
+    roundRect(ctx, W / 2 - mw / 2 - px, top - py, mw + px * 2, bh - (lh - size) + py * 2, size * .28); ctx.fill();
+  }
+  if (tx.style === "contorno"){
+    ctx.lineWidth = Math.max(2, size * .1); ctx.lineJoin = "round"; ctx.strokeStyle = dark ? "#ffffff" : "#000000";
+    lines.forEach((l, i) => ctx.strokeText(l, W / 2, top + i * lh));
+  }
+  if (tx.style === "sombra"){ ctx.shadowColor = "rgba(0,0,0,.6)"; ctx.shadowBlur = size * .35; ctx.shadowOffsetY = size * .06; }
+  ctx.fillStyle = tx.color;
+  lines.forEach((l, i) => ctx.fillText(l, W / 2, top + i * lh));
+  ctx.restore();
+}
+function chipGroup(box, opts, get, set, render){
+  box.innerHTML = "";
+  opts.forEach(([v, label, html]) => {
+    const b = document.createElement("button"); b.className = "chip txt"; b.setAttribute("aria-pressed", get() === v);
+    if (html) b.innerHTML = html; const sp = document.createElement("span"); sp.textContent = label; b.appendChild(sp);
+    b.addEventListener("click", () => { set(v); chipGroup(box, opts, get, set, render); render(); });
+    box.appendChild(b);
+  });
+}
+function syncTxUI(){
+  $("#txIn").value = st.tx.text;
+  $("#txSize").value = st.tx.size; $("#txSizeV").textContent = st.tx.size;
+  $("#txY").value = st.tx.y; $("#txYV").textContent = st.tx.y + "%";
+  chipGroup($("#txColors"), TX_COLORS.map(([v, n]) => [v, n, '<span class="sw" style="background:' + v + '"></span>']), () => st.tx.color, v => { st.tx.color = v; }, draw);
+  chipGroup($("#txStyles"), TX_STYLES, () => st.tx.style, v => { st.tx.style = v; }, draw);
+}
+$("#txIn").addEventListener("input", e => { st.tx.text = e.target.value; draw(); });
+function addTxLine(t){ st.tx.text = st.tx.text.trim() ? st.tx.text.replace(/\s+$/, "") + "\n" + t : t; syncTxUI(); draw(); }
+$("#txDate").addEventListener("click", () => { const d = new Date(); addTxLine(DIAS[d.getDay()] + ", " + d.getDate() + " de " + MESES[d.getMonth()]); });
+$("#txWeek").addEventListener("click", () => addTxLine(DIAS[new Date().getDay()]));
+$("#txClear").addEventListener("click", () => { st.tx.text = ""; syncTxUI(); draw(); });
+$$("[data-ty]").forEach(b => b.addEventListener("click", () => { st.tx.y = +b.dataset.ty; syncTxUI(); draw(); }));
+bindRange("txSize", v => v, v => { st.tx.size = v; draw(); });
+bindRange("txY", v => v + "%", v => { st.tx.y = v; draw(); });
 
 /* ---------- Model pane ---------- */
 function layoutSVG(l, w = 40, h = 50){
@@ -1086,28 +1269,22 @@ async function deleteLogo(l){
   }catch(e){ toast("Não deu para apagar a logo"); }
 }
 
-/* ---------- Library: church config ---------- */
+/* ---------- Library: foto da igreja, salvos e predefinições ---------- */
 async function saveCfg(){
-  const c = { id: 1, address: st.cfg.address || "", hours: st.cfg.hours || "", bg_path: st.cfg.bgAssetId || null, default_logo_id: st.cfg.defaultLogoId || null };
-  const r = await SB.from("config").upsert(c);
+  const r = await SB.from("config").update({ bg_path: st.cfg.bgAssetId || null, default_logo_id: st.cfg.defaultLogoId || null }).eq("id", 1);
   if (r.error){ toast("Não deu para salvar" + errHint(r.error), 3800); return false; }
   return true;
 }
 function applyCfg(){
-  $("#cfgAddr").value = st.cfg.address || ""; $("#cfgHours").value = st.cfg.hours || "";
-  if (!$("#artAddr").dataset.touched) $("#artAddr").value = st.cfg.address || "";
-  if (!$("#artHours").dataset.touched) $("#artHours").value = st.cfg.hours || "";
-  const src = st.cfg.bgAssetId ? pub(st.cfg.bgAssetId) : st.cfg.bgData;
+  const src = st.cfg.bgAssetId ? pub(st.cfg.bgAssetId) : null;
   const prev = $("#bgPrev");
-  if (src){ prev.src = src; prev.hidden = false; if (art.bgSrc !== src && !art.bgToday){ art.bgSrc = src; loadImage(src).then(i => { art.bg = i; drawArt(); }).catch(() => {}); } }
-  else prev.hidden = true;
-  $("#artBgNote").textContent = src ? "" : "Suba a foto da igreja em Biblioteca para ela aparecer no fundo.";
+  if (src){
+    prev.src = src; prev.hidden = false;
+    if (art.bgSrc !== src && !art.bgToday){ art.bgSrc = src; loadImage(src).then(i => { art.bg = i; drawArt(); }).catch(() => {}); }
+  } else prev.hidden = true;
+  $("#artBgNote").textContent = src || art.bgToday ? "" : "Suba a foto da igreja em Biblioteca para usar no fundo da faixa.";
   drawArt();
 }
-$("#cfgSave").addEventListener("click", async () => {
-  st.cfg.address = $("#cfgAddr").value.trim(); st.cfg.hours = $("#cfgHours").value.trim();
-  if (await saveCfg()){ applyCfg(); toast("Endereço e horários salvos"); }
-});
 $("#bgIn").addEventListener("change", async e => {
   const f = e.target.files[0]; e.target.value = ""; if (!f) return;
   try{
@@ -1122,6 +1299,106 @@ $("#bgIn").addEventListener("change", async e => {
     if (old) SB.storage.from(BUCKET).remove([old]);
     art.bgToday = false; art.bgSrc = null; applyCfg(); toast("Foto da igreja salva");
   }catch(err){ toast("Não deu para salvar a foto" + errHint(err), 3800); }
+});
+
+function canDelete(it){ return st.isAdmin || (st.me && it.created_by === st.me.id); }
+function armButton(b, label, fn){
+  b.addEventListener("click", async () => {
+    if (!b.dataset.arm){ b.dataset.arm = 1; b.textContent = "Confirmar"; setTimeout(() => { delete b.dataset.arm; b.textContent = label; }, 3000); return; }
+    delete b.dataset.arm; b.textContent = label; await fn();
+  });
+}
+function renderSimpleList(box, items, sub, del){
+  box.innerHTML = "";
+  if (!items.length){ box.innerHTML = '<div class="empty" style="margin-top:10px">Nada salvo ainda.</div>'; return; }
+  items.forEach(it => {
+    const d = document.createElement("div"); d.className = "libitem";
+    d.innerHTML = '<div class="nm"><span></span><small class="muted" style="display:block;font-weight:500;white-space:pre-line"></small></div><button class="btn small">Apagar</button>';
+    d.querySelector("span").textContent = it.name;
+    d.querySelector("small").textContent = sub(it);
+    const b = d.querySelector("button"); b.hidden = !canDelete(it);
+    armButton(b, "Apagar", () => del(it));
+    box.appendChild(d);
+  });
+}
+async function delRow(table, it, after){
+  const r = await SB.from(table).delete().eq("id", it.id).select();
+  if (r.error || !r.data || !r.data.length) return toast("Só quem criou ou o administrador pode apagar", 3400);
+  toast("Apagado"); after();
+}
+
+/* Endereços e horários */
+st.addrs = []; st.hours = [];
+async function loadSaved(){
+  const [a, h] = await Promise.all([
+    SB.from("enderecos").select("*").order("created_at"),
+    SB.from("horarios").select("*").order("created_at")
+  ]);
+  if (!a.error) st.addrs = a.data;
+  if (!h.error) st.hours = h.data;
+  renderSaved();
+}
+function renderSaved(){
+  const fill = (box, items, field) => {
+    box.innerHTML = "";
+    if (!items.length){ box.innerHTML = '<p class="muted" style="grid-column:1/-1;margin:0">Nenhum salvo ainda.</p>'; return; }
+    items.forEach(it => {
+      const b = document.createElement("button"); b.className = "chip txt";
+      b.setAttribute("aria-pressed", $(field).value.trim() === (it.text || "").trim());
+      b.textContent = it.name;
+      b.addEventListener("click", () => { $(field).value = it.text; $(field).dataset.touched = 1; renderSaved(); drawArt(); });
+      box.appendChild(b);
+    });
+  };
+  if (!$("#artAddr").dataset.touched && !$("#artAddr").value && st.addrs[0]) $("#artAddr").value = st.addrs[0].text;
+  if (!$("#artHours").dataset.touched && !$("#artHours").value && st.hours[0]) $("#artHours").value = st.hours[0].text;
+  fill($("#addrChips"), st.addrs, "#artAddr");
+  fill($("#hoursChips"), st.hours, "#artHours");
+  renderSimpleList($("#addrList"), st.addrs, it => it.text, it => delRow("enderecos", it, loadSaved));
+  renderSimpleList($("#hoursList"), st.hours, it => it.text, it => delRow("horarios", it, loadSaved));
+  drawArt();
+}
+async function saveSaved(table, nameEl, text, clearEl){
+  const name = nameEl.value.trim();
+  if (!text.trim()) return toast("Escreva o texto antes de salvar");
+  if (!name) return toast("Dê um nome (ex.: Sede, Domingo)");
+  const r = await SB.from(table).insert({ name, text: text.trim() });
+  if (r.error) return toast("Não deu para salvar" + errHint(r.error), 3600);
+  nameEl.value = ""; if (clearEl) clearEl.value = "";
+  await loadSaved(); toast("Salvo para toda a equipe");
+}
+$("#addrSave").addEventListener("click", () => saveSaved("enderecos", $("#addrName"), $("#artAddr").value));
+$("#hoursSave").addEventListener("click", () => saveSaved("horarios", $("#hoursName"), $("#artHours").value));
+$("#libAddrAdd").addEventListener("click", () => saveSaved("enderecos", $("#libAddrName"), $("#libAddrText").value, $("#libAddrText")));
+$("#libHoursAdd").addEventListener("click", () => saveSaved("horarios", $("#libHoursName"), $("#libHoursText").value, $("#libHoursText")));
+
+/* Predefinições de edição */
+st.presets = [];
+async function loadPresets(){
+  const r = await SB.from("presets").select("id,name,adj,created_by,created_at").order("created_at");
+  if (!r.error){ st.presets = r.data; renderPresets(); }
+}
+function renderPresets(){
+  const c = $("#presetChips"); c.innerHTML = "";
+  if (!st.presets.length) c.innerHTML = '<p class="muted" style="grid-column:1/-1;margin:0">Nenhuma ainda. Ajuste uma foto e salve no fim desta aba.</p>';
+  st.presets.forEach(p => {
+    const b = document.createElement("button"); b.className = "chip txt";
+    b.innerHTML = '<svg class="i"><use href="#i-sl"/></svg><span></span>'; b.querySelector("span").textContent = p.name;
+    b.addEventListener("click", () => {
+      const ph = curPhoto(); if (!ph) return toast("Toque num espaço com foto primeiro");
+      ph.adj = Object.assign(defaultAdj(), JSON.parse(JSON.stringify(p.adj || {})));
+      syncAdjUI(); draw(); toast("Aplicado: " + p.name);
+    });
+    c.appendChild(b);
+  });
+  renderSimpleList($("#presetList"), st.presets, () => "", it => delRow("presets", it, loadPresets));
+}
+$("#presetSave").addEventListener("click", async () => {
+  const ph = curPhoto(); if (!ph) return toast("Toque num espaço com foto primeiro");
+  const name = $("#presetName").value.trim(); if (!name) return toast("Dê um nome à predefinição");
+  const r = await SB.from("presets").insert({ name, adj: ph.adj });
+  if (r.error) return toast("Não deu para salvar" + errHint(r.error), 3600);
+  $("#presetName").value = ""; await loadPresets(); toast("Predefinição salva para toda a equipe");
 });
 
 /* ---------- Library: custom layouts ---------- */
@@ -1173,21 +1450,50 @@ function renderLyList(){
 }
 
 /* ---------- Arte do dia ---------- */
-const art = { img: null, bg: null, bgSrc: null, bgToday: false, op: 35, blur: 8, size: 86, y: 6, txt: 34 };
+const ART_FMTS = [
+  { id: "916", name: "9:16", w: 1080, h: 1920 },
+  { id: "45", name: "4:5", w: 1080, h: 1350 },
+  { id: "34", name: "3:4", w: 1080, h: 1440 },
+  { id: "11", name: "1:1", w: 1080, h: 1080 },
+  { id: "169", name: "16:9", w: 1920, h: 1080 },
+];
+const art = { img: null, bg: null, bgSrc: null, bgToday: false, fmt: ART_FMTS[1], zoom: 1, ox: 0, oy: 0, pos: "bottom", bgMode: "igreja", op: 80, txt: 32 };
+function renderArtFmts(){
+  const box = $("#artFmtChips"); box.innerHTML = "";
+  ART_FMTS.forEach(f => {
+    const b = document.createElement("button"); b.className = "chip"; b.setAttribute("aria-pressed", f === art.fmt);
+    const w = f.w > f.h ? 40 : Math.round(40 * f.w / f.h), h = f.w > f.h ? Math.round(40 * f.h / f.w) : 40;
+    b.innerHTML = '<svg width="40" height="40" aria-hidden="true"><rect x="' + (40 - w) / 2 + '" y="' + (40 - h) / 2 + '" width="' + w + '" height="' + h + '" rx="3" fill="currentColor" opacity=".55"/></svg>' + f.name;
+    b.addEventListener("click", () => { art.fmt = f; art.zoom = 1; art.ox = 0; art.oy = 0; $("#artFmtNote").textContent = ""; renderArtFmts(); drawArt(); });
+    box.appendChild(b);
+  });
+}
+function bestFmt(w, h){
+  const r = Math.log(w / h);
+  return ART_FMTS.reduce((b, f) => Math.abs(Math.log(f.w / f.h) - r) < Math.abs(Math.log(b.w / b.h) - r) ? f : b);
+}
+function renderBandChips(){
+  chipGroup($("#bandPos"), [["bottom", "Faixa embaixo"], ["top", "Faixa em cima"]], () => art.pos, v => { art.pos = v; }, drawArt);
+  chipGroup($("#bandBg"), [["igreja", "Foto da igreja"], ["escuro", "Escuro"], ["claro", "Claro"]], () => art.bgMode, v => { art.bgMode = v; }, drawArt);
+}
 $("#artIn").addEventListener("change", async e => {
   const f = e.target.files[0]; e.target.value = ""; if (!f) return;
-  try{ art.img = await fileToWork(f); drawArt(); }catch(err){ toast("Não deu para abrir a arte"); }
+  try{
+    art.img = await fileToWork(f);
+    art.fmt = bestFmt(art.img.width, art.img.height); art.zoom = 1; art.ox = 0; art.oy = 0;
+    $("#artFmtNote").textContent = "Proporção ajustada para " + art.fmt.name + " pelo tamanho da arte. Pode trocar se quiser.";
+    renderArtFmts(); drawArt();
+  }catch(err){ toast("Não deu para abrir a arte"); }
 });
 $("#artBgIn").addEventListener("change", async e => {
   const f = e.target.files[0]; e.target.value = ""; if (!f) return;
-  try{ art.bg = await fileToWork(f); art.bgToday = true; drawArt(); }catch(err){ toast("Não deu para abrir a foto"); }
+  try{ art.bg = await fileToWork(f); art.bgToday = true; art.bgMode = "igreja"; renderBandChips(); applyCfg(); }catch(err){ toast("Não deu para abrir a foto"); }
 });
-bindRange("bgOp", v => v + "%", v => { art.op = v; drawArt(); });
-bindRange("bgBlur", v => v, v => { art.blur = v; drawArt(); });
-bindRange("artSize", v => v + "%", v => { art.size = v; drawArt(); });
-bindRange("artY", v => v + "%", v => { art.y = v; drawArt(); });
+bindRange("bandOp", v => v + "%", v => { art.op = v; drawArt(); });
 bindRange("txtSize", v => v, v => { art.txt = v; drawArt(); });
+$("#artZoom").addEventListener("input", e => { art.zoom = +e.target.value; drawArt(); });
 ["artAddr", "artHours"].forEach(id => $("#" + id).addEventListener("input", e => { e.target.dataset.touched = 1; drawArt(); }));
+attachPanZoom($("#artPv"), () => art.img ? { cell: { x: 0, y: 0, w: art.fmt.w, h: art.fmt.h }, slot: art, img: art.img } : null, () => drawArt());
 function wrapLines(ctx, text, maxW){
   const out = [];
   String(text).split("\n").forEach(par => {
@@ -1198,164 +1504,81 @@ function wrapLines(ctx, text, maxW){
   return out;
 }
 function renderArt(ctx){
-  const W = st.fmt.w, H = st.fmt.h;
-  ctx.fillStyle = "#0d0d10"; ctx.fillRect(0, 0, W, H);
-  if (art.bg){
-    ctx.save(); ctx.globalAlpha = art.op / 100; if (art.blur) ctx.filter = "blur(" + art.blur + "px)";
-    const b = art.bg, sc = Math.max(W / b.width, H / b.height) * 1.06;
-    ctx.drawImage(b, (W - b.width * sc) / 2, (H - b.height * sc) / 2, b.width * sc, b.height * sc);
-    ctx.restore();
+  const W = art.fmt.w, H = art.fmt.h, k = Math.min(W, H) / 1080;
+  ctx.fillStyle = "#121214"; ctx.fillRect(0, 0, W, H);
+  if (art.img) drawCover(ctx, art.img, { x: 0, y: 0, w: W, h: H }, art);
+  else {
+    ctx.fillStyle = "rgba(255,255,255,.45)"; ctx.font = "700 " + Math.round(44 * k) + "px Archivo, sans-serif";
+    ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.fillText("Escolha a arte recebida", W / 2, H * .42);
   }
-  const g = ctx.createLinearGradient(0, H * .55, 0, H); g.addColorStop(0, "rgba(0,0,0,0)"); g.addColorStop(1, "rgba(0,0,0,.75)");
-  ctx.fillStyle = g; ctx.fillRect(0, H * .55, W, H * .45);
-  ctx.font = "600 " + art.txt + "px Archivo, sans-serif";
   const addr = $("#artAddr").value.trim(), hours = $("#artHours").value.trim();
-  const lh = art.txt * 1.3, pad = W * .07, maxW = W - pad * 2;
-  const addrLines = addr ? wrapLines(ctx, addr, maxW - art.txt * 1.2) : [];
-  ctx.font = "500 " + Math.round(art.txt * .9) + "px Archivo, sans-serif";
-  const hourLines = hours ? wrapLines(ctx, hours, maxW) : [];
-  const textH = (addrLines.length + hourLines.length) * lh + (addrLines.length && hourLines.length ? lh * .5 : 0);
-  const textTop = H - H * .05 - textH;
-  if (art.img){
-    const a = art.img, maxArtH = Math.max(H * .3, textTop - H * art.y / 100 - H * .03);
-    let aw = W * art.size / 100, ah = aw * a.height / a.width;
-    if (ah > maxArtH){ ah = maxArtH; aw = ah * a.width / a.height; }
-    ctx.save(); ctx.shadowColor = "rgba(0,0,0,.45)"; ctx.shadowBlur = 40; ctx.shadowOffsetY = 12;
-    ctx.drawImage(a, (W - aw) / 2, H * art.y / 100, aw, ah); ctx.restore();
+  if (!addr && !hours) return;
+  const ts = art.txt * k, lh = ts * 1.32, pad = ts * 1.1, maxW = W - pad * 2;
+  ctx.font = "700 " + ts + "px Archivo, sans-serif";
+  const aL = addr ? wrapLines(ctx, addr, maxW - ts * 1.2) : [];
+  const hs = Math.round(ts * .9);
+  ctx.font = "500 " + hs + "px Archivo, sans-serif";
+  const hL = hours ? wrapLines(ctx, hours, maxW) : [];
+  const gap = aL.length && hL.length ? lh * .35 : 0;
+  const bandH = pad * 1.5 + (aL.length + hL.length) * lh + gap;
+  const y0 = art.pos === "top" ? 0 : H - bandH;
+  const light = art.bgMode === "claro";
+  ctx.save(); ctx.beginPath(); ctx.rect(0, y0, W, bandH); ctx.clip();
+  if (art.bgMode === "igreja" && art.bg){
+    const b = art.bg, sc = Math.max(W / b.width, bandH / b.height) * 1.12;
+    ctx.filter = "blur(" + Math.max(2, Math.round(5 * k)) + "px)";
+    ctx.drawImage(b, (W - b.width * sc) / 2, y0 + (bandH - b.height * sc) / 2, b.width * sc, b.height * sc);
+    ctx.filter = "none";
+    ctx.fillStyle = "rgba(0,0,0," + (.25 + art.op / 100 * .6) + ")"; ctx.fillRect(0, y0, W, bandH);
   } else {
-    ctx.fillStyle = "rgba(255,255,255,.5)"; ctx.font = "600 40px Archivo, sans-serif"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
-    ctx.fillText("Escolha a arte recebida", W / 2, H * .35);
+    ctx.fillStyle = light ? "rgba(255,255,255," + art.op / 100 + ")" : "rgba(14,14,16," + art.op / 100 + ")";
+    ctx.fillRect(0, y0, W, bandH);
   }
-  ctx.textAlign = "center"; ctx.textBaseline = "top"; ctx.fillStyle = "#ffffff";
-  let y = textTop;
-  ctx.font = "600 " + art.txt + "px Archivo, sans-serif";
-  addrLines.forEach((l, i) => {
-    const w = ctx.measureText(l).width;
+  ctx.restore();
+  const ink = light ? "#141414" : "#ffffff";
+  let y = y0 + pad * .75;
+  ctx.textAlign = "center"; ctx.textBaseline = "top";
+  ctx.font = "700 " + ts + "px Archivo, sans-serif"; ctx.fillStyle = ink;
+  aL.forEach((l, i) => {
+    const w = ctx.measureText(l).width, shift = i === 0 ? ts * .45 : 0;
     if (i === 0){
-      const s = art.txt * .8, px = W / 2 - w / 2 - s * .9, py = y + art.txt * .05;
-      ctx.save(); ctx.fillStyle = "#e5343c"; ctx.beginPath();
-      ctx.arc(px, py + s * .35, s * .35, Math.PI, 0); ctx.lineTo(px, py + s); ctx.closePath(); ctx.fill();
-      ctx.fillStyle = "#fff"; ctx.beginPath(); ctx.arc(px, py + s * .35, s * .13, 0, Math.PI * 2); ctx.fill(); ctx.restore();
+      const s = ts * .82, px = W / 2 - w / 2 + shift - s * .75, py = y + ts * .04;
+      ctx.save(); ctx.fillStyle = "#d4262e"; ctx.beginPath();
+      ctx.arc(px, py + s * .36, s * .36, Math.PI, 0); ctx.lineTo(px, py + s); ctx.closePath(); ctx.fill();
+      ctx.fillStyle = "#fff"; ctx.beginPath(); ctx.arc(px, py + s * .36, s * .13, 0, Math.PI * 2); ctx.fill(); ctx.restore();
     }
-    ctx.fillText(l, W / 2 + (i === 0 ? art.txt * .3 : 0), y); y += lh;
+    ctx.fillStyle = ink; ctx.fillText(l, W / 2 + shift, y); y += lh;
   });
-  if (addrLines.length && hourLines.length) y += lh * .5;
-  ctx.font = "500 " + Math.round(art.txt * .9) + "px Archivo, sans-serif"; ctx.fillStyle = "rgba(255,255,255,.88)";
-  hourLines.forEach(l => { ctx.fillText(l, W / 2, y); y += lh; });
+  y += gap;
+  ctx.font = "500 " + hs + "px Archivo, sans-serif"; ctx.fillStyle = light ? "rgba(20,20,20,.85)" : "rgba(255,255,255,.9)";
+  hL.forEach(l => { ctx.fillText(l, W / 2, y); y += lh; });
 }
 function drawArt(){
-  const cv = $("#artPv"); if (cv.width !== st.fmt.w || cv.height !== st.fmt.h){ cv.width = st.fmt.w; cv.height = st.fmt.h; }
+  const cv = $("#artPv"); if (!cv) return;
+  if (cv.width !== art.fmt.w || cv.height !== art.fmt.h){ cv.width = art.fmt.w; cv.height = art.fmt.h; }
   renderArt(cv.getContext("2d"));
+  $("#artZoom").value = art.zoom; $("#artZoomV").textContent = art.zoom.toFixed(1) + "×";
 }
 
 /* ---------- Export ---------- */
-async function exportCanvas(kind){
-  const c = document.createElement("canvas"); c.width = st.fmt.w; c.height = st.fmt.h;
+async function makeBlob(kind){
+  const f = kind === "art" ? art.fmt : st.fmt;
+  const c = document.createElement("canvas"); c.width = f.w; c.height = f.h;
   const ctx = c.getContext("2d");
   if (kind === "art") renderArt(ctx); else render(ctx, false);
-  const blob = await new Promise(r => c.toBlob(r, "image/jpeg", .95));
+  return new Promise(r => c.toBlob(r, "image/jpeg", .93));
+}
+async function exportCanvas(kind){
+  const blob = await makeBlob(kind);
   const d = new Date(), pad = n => String(n).padStart(2, "0");
   const name = (kind === "art" ? "arte-" : "montagem-") + d.getFullYear() + pad(d.getMonth() + 1) + pad(d.getDate()) + "-" + pad(d.getHours()) + pad(d.getMinutes()) + ".jpg";
   await saveFile(name, blob); toast("Imagem salva");
 }
 $("#modalClose").addEventListener("click", () => $("#modal").classList.remove("on"));
+const curView = () => $("nav.top [aria-selected=true]").dataset.view;
 $("#dlBtn").addEventListener("click", () => {
-  const v = $("nav.top [aria-selected=true]").dataset.view;
-  if (v === "arte"){ if (!art.img) return toast("Escolha a arte primeiro"); exportCanvas("art"); }
+  if (curView() === "arte"){ if (!art.img) return toast("Escolha a arte primeiro"); exportCanvas("art"); }
   else { if (!st.slots.some(s => s.photoId)) return toast("Coloque pelo menos uma foto"); exportCanvas("mont"); }
-});
-
-/* ---------- Lista de prontas ---------- */
-const done = { items: [], editing: null };
-const IDB = {
-  db: null,
-  open(){ return new Promise(res => { try{ const r = indexedDB.open("estudio-midia", 1);
-    r.onupgradeneeded = () => r.result.createObjectStore("prontas", { keyPath: "id" });
-    r.onsuccess = () => { IDB.db = r.result; res(r.result); }; r.onerror = () => res(null); }catch(e){ res(null); } }); },
-  tx(mode){ return IDB.db ? IDB.db.transaction("prontas", mode).objectStore("prontas") : null; },
-  put(it){ try{ const s = IDB.tx("readwrite"); if (s) s.put({ id: it.id, kind: it.kind, blob: it.blob, order: it.order, createdAt: it.createdAt }); }catch(e){} },
-  del(id){ try{ const s = IDB.tx("readwrite"); if (s) s.delete(id); }catch(e){} },
-  all(){ return new Promise(res => { try{ const s = IDB.tx("readonly"); if (!s) return res([]); const r = s.getAll(); r.onsuccess = () => res(r.result || []); r.onerror = () => res([]); }catch(e){ res([]); } }); }
-};
-function renumber(){ done.items.forEach((it, i) => { if (it.order !== i){ it.order = i; IDB.put(it); } }); }
-async function makeBlob(kind){
-  const c = document.createElement("canvas"); c.width = st.fmt.w; c.height = st.fmt.h;
-  const ctx = c.getContext("2d");
-  if (kind === "art") renderArt(ctx); else render(ctx, false);
-  return new Promise(r => c.toBlob(r, "image/jpeg", .95));
-}
-function snapshot(){
-  return { fmtId: st.fmt.id, layoutId: st.layoutId, gap: st.gap, logoId: st.logoId, logoSize: st.logoSize, logoBottom: st.logoBottom,
-    slots: st.slots.map(s => Object.assign({}, s)) };
-}
-function restore(sn){
-  st.fmt = FORMATS.find(f => f.id === sn.fmtId) || FORMATS[0];
-  st.layoutId = sn.layoutId; st.gap = sn.gap; st.logoId = sn.logoId; st.logoSize = sn.logoSize; st.logoBottom = sn.logoBottom; st._logoTouched = true;
-  st.slots = sn.slots.map(s => Object.assign({}, s, { photoId: st.photos.find(p => p.id === s.photoId) ? s.photoId : null }));
-  st.sel = 0;
-  $("#gap").value = st.gap; $("#gapV").textContent = st.gap;
-  $("#logoSize").value = st.logoSize; $("#logoSizeV").textContent = st.logoSize + "%";
-  $("#logoBottom").value = st.logoBottom; $("#logoBottomV").textContent = st.logoBottom + "%";
-  renderFormats(); renderLayoutChips(); renderLogoChips(); draw(); syncAdjUI();
-}
-function updateAddBtn(){
-  $("#addLbl").textContent = done.editing ? "Atualizar na lista" : "Adicionar à lista";
-  const bd = $("#doneBadge"); bd.textContent = done.items.length; bd.hidden = !done.items.length;
-  bd.classList.remove("pop"); void bd.offsetWidth; bd.classList.add("pop");
-}
-$("#addBtn").addEventListener("click", async () => {
-  const v = $("nav.top [aria-selected=true]").dataset.view, kind = v === "arte" ? "art" : "mont";
-  if (kind === "art" && !art.img) return toast("Escolha a arte primeiro");
-  if (kind === "mont" && !st.slots.some(s => s.photoId)) return toast("Coloque pelo menos uma foto");
-  const blob = await makeBlob(kind);
-  const ed = kind === "mont" && done.editing && done.items.find(i => i.id === done.editing);
-  if (ed){
-    URL.revokeObjectURL(ed.url); ed.blob = blob; ed.url = URL.createObjectURL(blob); ed.snap = snapshot(); IDB.put(ed);
-    done.editing = null; toast("Montagem " + (ed.order + 1) + " atualizada");
-  } else {
-    const it = { id: uid(), kind, blob, url: URL.createObjectURL(blob), snap: kind === "mont" ? snapshot() : null, order: done.items.length, createdAt: Date.now(), on: true };
-    done.items.push(it); IDB.put(it);
-    toast((kind === "art" ? "Arte" : "Montagem") + " " + done.items.length + " adicionada à lista");
-  }
-  if (kind === "mont"){ st.slots.forEach(s => { s.photoId = null; s.zoom = 1; s.ox = 0; s.oy = 0; }); st.sel = 0; draw(); syncAdjUI(); }
-  renderDone(); updateAddBtn();
-});
-function renderDone(){
-  const g = $("#doneGrid"); g.innerHTML = "";
-  $("#doneEmpty").hidden = done.items.length > 0;
-  done.items.forEach((it, i) => {
-    const c = document.createElement("div"); c.className = "card" + (it.on ? " on" : "");
-    c.innerHTML = '<img alt=""><span class="ck">' + (it.on ? "✓" : "") + '</span><div class="bar"><span class="num"></span>' +
-      '<button data-a="l" aria-label="Mover para antes">◀</button><button data-a="r" aria-label="Mover para depois">▶</button>' +
-      (it.snap ? '<button data-a="e">Editar</button>' : "") + "</div>";
-    c.querySelector("img").src = it.url;
-    c.querySelector(".num").textContent = String(i + 1).padStart(2, "0") + (it.kind === "art" ? " arte" : "");
-    c.querySelector("img").addEventListener("click", () => { it.on = !it.on; renderDone(); });
-    c.querySelector('[data-a="l"]').addEventListener("click", () => { if (i > 0){ [done.items[i - 1], done.items[i]] = [done.items[i], done.items[i - 1]]; renumber(); renderDone(); } });
-    c.querySelector('[data-a="r"]').addEventListener("click", () => { if (i < done.items.length - 1){ [done.items[i + 1], done.items[i]] = [done.items[i], done.items[i + 1]]; renumber(); renderDone(); } });
-    const e = c.querySelector('[data-a="e"]');
-    if (e) e.addEventListener("click", () => {
-      const missing = it.snap.slots.some(s => s.photoId && !st.photos.find(p => p.id === s.photoId));
-      if (missing){ toast("As fotos dessa montagem não estão mais abertas. Adicione de novo para editar.", 3800); return; }
-      done.editing = it.id; restore(it.snap); updateAddBtn();
-      $('nav.top [data-view="mont"]').click(); toast("Editando a montagem " + (i + 1) + ". Toque em Atualizar na lista quando terminar.", 3800);
-    });
-    g.appendChild(c);
-  });
-  const n = done.items.filter(i => i.on).length;
-  $("#selInfo").textContent = done.items.length ? n + " de " + done.items.length + " marcada(s)" : "";
-  updateAddBtn();
-}
-const marked = () => done.items.filter(i => i.on);
-const fileName = (it, i) => (it.kind === "art" ? "arte-" : "montagem-") + String(i + 1).padStart(2, "0") + ".jpg";
-$("#selAll").addEventListener("click", () => { done.items.forEach(i => i.on = true); renderDone(); });
-$("#selNone").addEventListener("click", () => { done.items.forEach(i => i.on = false); renderDone(); });
-$("#delSel").addEventListener("click", e => {
-  const b = e.currentTarget, m = marked(); if (!m.length) return toast("Marque as que quer apagar");
-  if (!b.dataset.arm){ b.dataset.arm = 1; b.textContent = "Confirmar (" + m.length + ")"; setTimeout(() => { delete b.dataset.arm; b.textContent = "Apagar marcadas"; }, 3000); return; }
-  m.forEach(it => { URL.revokeObjectURL(it.url); IDB.del(it.id); if (done.editing === it.id) done.editing = null; });
-  done.items = done.items.filter(i => !i.on); renumber(); renderDone();
-  delete b.dataset.arm; b.textContent = "Apagar marcadas"; toast("Apagadas");
 });
 async function saveFile(name, blob){
   const url = URL.createObjectURL(blob), a = document.createElement("a");
@@ -1366,39 +1589,202 @@ async function saveFile(name, blob){
 function canShareFiles(){
   try{ return !!(navigator.canShare && navigator.canShare({ files: [new File([new Blob(["x"], { type: "image/jpeg" })], "t.jpg", { type: "image/jpeg" })] })); }catch(e){ return false; }
 }
+
+/* ---------- Prontas (na nuvem) ---------- */
+const PB = "prontas";
+const done = { items: [], editing: null, snaps: new Map(), range: "hoje", mine: false };
+function snapshot(){
+  return { fmtId: st.fmt.id, layoutId: st.layoutId, gap: st.gap, logoId: st.logoId, logoSize: st.logoSize, logoBottom: st.logoBottom,
+    slots: st.slots.map(s => Object.assign({}, s)), tx: Object.assign({}, st.tx) };
+}
+function restore(sn){
+  st.fmt = FORMATS.find(f => f.id === sn.fmtId) || FORMATS[0];
+  st.layoutId = sn.layoutId; st.gap = sn.gap; st.logoId = sn.logoId; st.logoSize = sn.logoSize; st.logoBottom = sn.logoBottom; st._logoTouched = true;
+  st.slots = sn.slots.map(s => Object.assign({}, s, { photoId: st.photos.find(p => p.id === s.photoId) ? s.photoId : null }));
+  if (sn.tx) st.tx = Object.assign({}, sn.tx);
+  st.sel = 0;
+  $("#gap").value = st.gap; $("#gapV").textContent = st.gap;
+  $("#logoSize").value = st.logoSize; $("#logoSizeV").textContent = st.logoSize + "%";
+  $("#logoBottom").value = st.logoBottom; $("#logoBottomV").textContent = st.logoBottom + "%";
+  renderFormats(); renderLayoutChips(); renderLogoChips(); syncTxUI(); draw(); syncAdjUI();
+}
+const dayKey = v => { const d = new Date(v); return d.getFullYear() + "-" + d.getMonth() + "-" + d.getDate(); };
+function dayLabel(v){
+  const d = new Date(v);
+  if (dayKey(d) === dayKey(Date.now())) return "Hoje";
+  if (dayKey(d) === dayKey(Date.now() - 864e5)) return "Ontem";
+  return DIAS[d.getDay()] + ", " + d.getDate() + " de " + MESES[d.getMonth()];
+}
+function sinceISO(){
+  if (done.range === "hoje"){ const d = new Date(); d.setHours(0, 0, 0, 0); return d.toISOString(); }
+  if (done.range === "all") return null;
+  return new Date(Date.now() - done.range * 864e5).toISOString();
+}
+function updateAddBtn(){
+  $("#addLbl").textContent = done.editing ? "Atualizar na lista" : "Adicionar à lista";
+  const n = done.items.filter(i => dayKey(i.created_at) === dayKey(Date.now())).length;
+  const bd = $("#doneBadge");
+  if (bd.textContent !== String(n)){ bd.textContent = n; bd.classList.remove("pop"); void bd.offsetWidth; bd.classList.add("pop"); }
+  bd.hidden = !n;
+}
+function renderDoneFilter(){
+  chipGroup($("#doneFilter"), [["hoje", "Hoje"], [7, "7 dias"], [30, "30 dias"], ["all", "Todas"]], () => done.range, v => { done.range = v; }, loadDone);
+  const b = document.createElement("button"); b.className = "chip txt"; b.setAttribute("aria-pressed", done.mine); b.textContent = "Só as minhas";
+  b.addEventListener("click", () => { done.mine = !done.mine; renderDoneFilter(); loadDone(); });
+  $("#doneFilter").appendChild(b);
+}
+function sortDone(){
+  done.items.sort((a, b) => dayKey(a.created_at) !== dayKey(b.created_at) ? new Date(b.created_at) - new Date(a.created_at) : (a.ord || 0) - (b.ord || 0));
+}
+async function loadDone(){
+  if (!SB || !st.me) return;
+  let q = SB.from("prontas").select("id,path,kind,ord,created_at,created_by,author").order("created_at", { ascending: false }).limit(400);
+  const since = sinceISO(); if (since) q = q.gte("created_at", since);
+  if (done.mine) q = q.eq("created_by", st.me.id);
+  const r = await q;
+  if (r.error){ toast("Não deu para carregar as prontas" + errHint(r.error), 3600); return; }
+  const old = new Map(done.items.map(i => [i.id, i]));
+  const need = r.data.filter(x => { const o = old.get(x.id); return !(o && o.url && o.path === x.path); }).map(x => x.path);
+  const urls = new Map();
+  if (need.length){
+    const s = await SB.storage.from(PB).createSignedUrls(need, 6 * 3600);
+    (s.data || []).forEach(u => { if (u.signedUrl) urls.set(u.path, u.signedUrl); });
+  }
+  done.items = r.data.map(x => {
+    const o = old.get(x.id), same = o && o.path === x.path;
+    return Object.assign({}, x, { url: urls.get(x.path) || (same ? o.url : null), blob: same ? o.blob : null, on: !!(o && o.on) });
+  });
+  sortDone(); renderDone();
+}
+function renderDone(){
+  const g = $("#doneGrid"); g.innerHTML = "";
+  $("#doneEmpty").hidden = done.items.length > 0;
+  let lastDay = null, n = 0;
+  done.items.forEach((it, i) => {
+    const dk = dayKey(it.created_at);
+    if (dk !== lastDay){ lastDay = dk; n = 0; const h = document.createElement("div"); h.className = "dayh"; h.textContent = dayLabel(it.created_at); g.appendChild(h); }
+    n++;
+    const prev = done.items[i - 1], next = done.items[i + 1];
+    const canPrev = prev && dayKey(prev.created_at) === dk, canNext = next && dayKey(next.created_at) === dk;
+    const c = document.createElement("div"); c.className = "card" + (it.on ? " on" : "");
+    c.innerHTML = '<img alt="" loading="lazy"><span class="ck">' + (it.on ? "✓" : "") + '</span><div class="bar"><span class="num"><span class="n"></span><span class="by"></span></span>' +
+      '<button data-a="l" aria-label="Mover para antes">◀</button><button data-a="r" aria-label="Mover para depois">▶</button>' +
+      (done.snaps.has(it.id) ? '<button data-a="e">Editar</button>' : "") + "</div>";
+    if (it.url) c.querySelector("img").src = it.url;
+    c.querySelector(".n").textContent = String(n).padStart(2, "0") + (it.kind === "art" ? " arte" : "");
+    c.querySelector(".by").textContent = it.author || "";
+    c.querySelector("img").addEventListener("click", () => { it.on = !it.on; if (it.on) getBlob(it).catch(() => {}); renderDone(); });
+    const l = c.querySelector('[data-a="l"]'), rgt = c.querySelector('[data-a="r"]');
+    l.disabled = !canPrev; rgt.disabled = !canNext;
+    l.addEventListener("click", () => canPrev && swapOrd(it, prev));
+    rgt.addEventListener("click", () => canNext && swapOrd(it, next));
+    const e = c.querySelector('[data-a="e"]');
+    if (e) e.addEventListener("click", () => {
+      const sn = done.snaps.get(it.id);
+      if (sn.slots.some(s => s.photoId && !st.photos.find(p => p.id === s.photoId))){ toast("As fotos dessa montagem não estão mais abertas.", 3600); return; }
+      done.editing = it.id; restore(sn); updateAddBtn();
+      $('nav.top [data-view="mont"]').click(); toast("Editando. Toque em Atualizar na lista quando terminar.", 3600);
+    });
+    g.appendChild(c);
+  });
+  const m = done.items.filter(i => i.on).length;
+  $("#selInfo").textContent = done.items.length ? m + " de " + done.items.length + " marcada(s)" : "";
+  updateAddBtn();
+}
+async function swapOrd(a, b){
+  let oa = a.ord || 0, ob = b.ord || 0; if (oa === ob) ob = oa + 1;
+  const [r1, r2] = await Promise.all([
+    SB.from("prontas").update({ ord: ob }).eq("id", a.id).select(),
+    SB.from("prontas").update({ ord: oa }).eq("id", b.id).select()
+  ]);
+  if (r1.error || r2.error || !r1.data.length || !r2.data.length){ toast("Você só pode mudar a ordem das suas montagens", 3400); return loadDone(); }
+  a.ord = ob; b.ord = oa; sortDone(); renderDone();
+}
+async function getBlob(it){
+  if (it.blob) return it.blob;
+  const r = await SB.storage.from(PB).download(it.path);
+  if (r.error) throw r.error;
+  it.blob = r.data; return r.data;
+}
+$("#addBtn").addEventListener("click", async () => {
+  const kind = curView() === "arte" ? "art" : "mont";
+  if (kind === "art" && !art.img) return toast("Escolha a arte primeiro");
+  if (kind === "mont" && !st.slots.some(s => s.photoId)) return toast("Coloque pelo menos uma foto");
+  if (!SB || !st.me) return toast("Entre na sua conta primeiro");
+  const btn = $("#addBtn"); btn.disabled = true; $("#addLbl").textContent = "Salvando…";
+  try{
+    const blob = await makeBlob(kind);
+    const ed = kind === "mont" && done.editing ? done.items.find(i => i.id === done.editing) : null;
+    const path = st.me.id + "/" + uid() + Date.now().toString(36) + ".jpg";
+    const up = await SB.storage.from(PB).upload(path, blob, { contentType: "image/jpeg" });
+    if (up.error) throw up.error;
+    if (ed){
+      const r = await SB.from("prontas").update({ path }).eq("id", ed.id).select();
+      if (r.error || !r.data.length){ SB.storage.from(PB).remove([path]); throw r.error || new Error("Só quem criou ou o administrador pode alterar"); }
+      SB.storage.from(PB).remove([ed.path]);
+      done.snaps.set(ed.id, snapshot()); done.editing = null; toast("Montagem atualizada");
+    } else {
+      const r = await SB.from("prontas").insert({ path, kind, ord: Date.now(), author: (st.me.name || "").split(/\s+/)[0] }).select("id").single();
+      if (r.error){ SB.storage.from(PB).remove([path]); throw r.error; }
+      if (kind === "mont") done.snaps.set(r.data.id, snapshot());
+      toast((kind === "art" ? "Arte" : "Montagem") + " salva nas Prontas");
+    }
+    if (kind === "mont"){ st.slots.forEach(s => { s.photoId = null; s.zoom = 1; s.ox = 0; s.oy = 0; }); st.sel = 0; draw(); syncAdjUI(); }
+    await loadDone();
+  }catch(e){ toast("Não deu para salvar" + errHint(e), 3800); }
+  finally{ btn.disabled = false; updateAddBtn(); }
+});
+const marked = () => done.items.filter(i => i.on);
+const fileName = (it, i) => (it.kind === "art" ? "arte-" : "montagem-") + String(i + 1).padStart(2, "0") + ".jpg";
+$("#selAll").addEventListener("click", () => { done.items.forEach(i => { i.on = true; getBlob(i).catch(() => {}); }); renderDone(); });
+$("#selNone").addEventListener("click", () => { done.items.forEach(i => i.on = false); renderDone(); });
+armButton($("#delSel"), "Apagar", async () => {
+  const m = marked(); if (!m.length) return toast("Marque as que quer apagar");
+  let ok = 0, no = 0;
+  for (const it of m){
+    const r = await SB.from("prontas").delete().eq("id", it.id).select();
+    if (!r.error && r.data && r.data.length){ ok++; SB.storage.from(PB).remove([it.path]); done.snaps.delete(it.id); if (done.editing === it.id) done.editing = null; }
+    else no++;
+  }
+  toast(ok + " apagada(s)" + (no ? ". " + no + " não são suas e só o administrador pode apagar." : ""), 3600);
+  await loadDone();
+});
+$("#delSel").innerHTML = '<svg class="i"><use href="#i-trash"/></svg>Apagar';
 $("#shareSel").hidden = !canShareFiles();
 $("#shareSel").addEventListener("click", async () => {
   const m = marked(); if (!m.length) return toast("Marque pelo menos uma");
-  const files = m.map((it, i) => new File([it.blob], fileName(it, i), { type: "image/jpeg" }));
-  try{ await navigator.share({ files }); }
-  catch(e){ if (e && e.name !== "AbortError") toast("Não deu para compartilhar. Use Baixar uma por uma.", 3600); }
+  const ready = m.every(i => i.blob);
+  try{
+    const blobs = await Promise.all(m.map(getBlob));
+    const files = blobs.map((b, i) => new File([b], fileName(m[i], i), { type: "image/jpeg" }));
+    await navigator.share({ files });
+  }catch(e){
+    if (e && e.name === "AbortError") return;
+    if (!ready || (e && e.name === "NotAllowedError")) return toast("Imagens prontas. Toque de novo em Enviar no WhatsApp.", 3400);
+    toast("Não deu para compartilhar. Use Baixar uma por uma.", 3600);
+  }
 });
 $("#zipSel").addEventListener("click", async () => {
   const m = marked(); if (!m.length) return toast("Marque pelo menos uma");
   if (!window.JSZip) return toast("Não deu para carregar o ZIP. Use Baixar uma por uma.");
-  const btn = $("#zipSel"); btn.disabled = true; btn.textContent = "Preparando ZIP…";
+  const btn = $("#zipSel"); btn.disabled = true;
   try{
     const z = new JSZip();
-    m.forEach((it, i) => z.file(fileName(it, i), it.blob));
+    const blobs = await Promise.all(m.map(getBlob));
+    blobs.forEach((b, i) => z.file(fileName(m[i], i), b));
     const blob = await z.generateAsync({ type: "blob" });
     const d = new Date(), pad = n => String(n).padStart(2, "0");
-    const r = await saveFile("montagens-" + d.getFullYear() + pad(d.getMonth() + 1) + pad(d.getDate()) + ".zip", blob);
-    if (r === "ok") toast(m.length + " imagem(ns) salvas no ZIP");
-    else if (r === "fallback") toast("Este aparelho não permite baixar ZIP aqui. Use Baixar uma por uma.", 3800);
-  }finally{ btn.disabled = false; btn.textContent = "Baixar marcadas em ZIP"; }
+    await saveFile("montagens-" + d.getFullYear() + pad(d.getMonth() + 1) + pad(d.getDate()) + ".zip", blob);
+    toast(m.length + " imagem(ns) no ZIP");
+  }catch(e){ toast("Não deu para baixar" + errHint(e), 3600); }
+  finally{ btn.disabled = false; }
 });
 $("#oneSel").addEventListener("click", async () => {
   const m = marked(); if (!m.length) return toast("Marque pelo menos uma");
-  for (let i = 0; i < m.length; i++){
-    await saveFile(fileName(m[i], i), m[i].blob);
-    await new Promise(r => setTimeout(r, 450));
-  }
-  toast(m.length + " imagem(ns) baixada(s)");
-});
-IDB.open().then(() => IDB.all()).then(rows => {
-  if (!rows.length) return;
-  rows.sort((a, b) => a.order - b.order).forEach(r => done.items.push({ id: r.id, kind: r.kind, blob: r.blob, url: URL.createObjectURL(r.blob), snap: null, order: r.order, createdAt: r.createdAt, on: true }));
-  renumber(); renderDone();
+  try{
+    for (let i = 0; i < m.length; i++){ await saveFile(fileName(m[i], i), await getBlob(m[i])); await new Promise(r => setTimeout(r, 450)); }
+    toast(m.length + " imagem(ns) baixada(s)");
+  }catch(e){ toast("Não deu para baixar" + errHint(e), 3600); }
 });
 
 /* ---------- Navigation ---------- */
@@ -1407,7 +1793,7 @@ $$("nav.top button").forEach(b => b.addEventListener("click", () => {
   $$(".view").forEach(v => v.classList.toggle("on", v.id === "v-" + b.dataset.view));
   const v = b.dataset.view;
   $("#dlBar").hidden = v === "lib" || v === "done";
-  if (v === "done") renderDone();
+  if (v === "done"){ renderDoneFilter(); loadDone(); }
   if (v === "arte") drawArt();
   window.scrollTo(0, 0);
 }));
@@ -1418,7 +1804,8 @@ $$(".seg button").forEach(b => b.addEventListener("click", () => {
 }));
 
 /* ---------- Init ---------- */
-buildSliders(); renderDone(); renderFormats(); renderLayoutChips(); renderTray(); renderLyEditor(); syncAdjUI();
+buildSliders(); renderFormats(); renderLayoutChips(); renderTray(); renderLyEditor(); syncAdjUI(); syncTxUI();
+renderArtFmts(); renderBandChips(); renderDoneFilter(); renderDone(); renderPresets(); renderSaved();
 setLogos([]); setLayouts([]); applyCfg();
 draw();
 if (document.fonts && document.fonts.load){ Promise.all([document.fonts.load("600 34px Archivo"), document.fonts.load("500 30px Archivo")]).then(() => { draw(); drawArt(); }).catch(() => {}); }
@@ -1453,7 +1840,7 @@ async function loadCfg(){
   applyCfg(); renderLogoLib();
   if (!st._logoTouched && st.cfg.defaultLogoId && st.logos.find(l => l.id === st.cfg.defaultLogoId)){ st.logoId = st.cfg.defaultLogoId; renderLogoChips(); draw(); }
 }
-async function loadAll(){ await loadLogos(); await Promise.all([loadLayouts(), loadCfg()]); if (st.isAdmin) loadTeam(false); }
+async function loadAll(){ await loadLogos(); await Promise.all([loadLayouts(), loadCfg(), loadPresets(), loadSaved(), loadDone()]); if (st.isAdmin) loadTeam(false); }
 
 let mode = "in";
 function amsg(t, err){ const m = $("#aMsg"); m.textContent = t || ""; m.classList.toggle("err", !!err); }
@@ -1553,17 +1940,16 @@ async function enter(session){
 function applyRole(){
   const a = st.isAdmin;
   ["#logoIn", "#bgIn"].forEach(sel => { $(sel).parentElement.hidden = !a; });
-  $("#logoName").hidden = !a; $("#cfgSave").hidden = !a;
-  $("#cfgAddr").readOnly = !a; $("#cfgHours").readOnly = !a;
+  $("#logoName").hidden = !a;
   $("#teamPanel").hidden = !a;
   let n = $("#roleNote");
   if (!a && !n){
     n = document.createElement("p"); n.id = "roleNote"; n.className = "muted";
-    n.textContent = "Quem sobe logos, foto da igreja e endereço é o administrador. Você já pode usar tudo que está salvo.";
+    n.textContent = "Quem sobe logos e a foto da igreja é o administrador. Tudo que ele sobe aparece para você automaticamente.";
     $("#logoList").before(n);
   }
   if (n) n.hidden = a;
-  renderLogoLib();
+  renderLogoLib(); renderSaved(); renderPresets();
 }
 async function loadTeam(notify = true){
   const r = await SB.from("profiles").select("*").order("created_at");
@@ -1571,7 +1957,7 @@ async function loadTeam(notify = true){
   if (r.error) return;
   r.data.forEach(p => {
     const it = document.createElement("div"); it.className = "teamitem";
-    it.innerHTML = '<div class="who"><b></b><small></small></div><span class="pill"></span><button class="btn small" data-a="ap"></button><button class="btn small" data-a="ad"></button>';
+    it.innerHTML = '<div class="who"><b></b><small></small></div><span class="pill"></span><button class="btn small" data-a="ap"></button><button class="btn small" data-a="ad"></button><button class="btn small" data-a="rm">Remover</button>';
     it.querySelector("b").textContent = p.name || "(sem nome)";
     it.querySelector("small").textContent = p.email || "";
     const pill = it.querySelector(".pill");
@@ -1580,7 +1966,13 @@ async function loadTeam(notify = true){
     const ap = it.querySelector('[data-a="ap"]'), ad = it.querySelector('[data-a="ad"]');
     ap.textContent = p.approved ? "Bloquear" : "Liberar"; if (!p.approved) ap.classList.add("primary");
     ad.textContent = p.is_admin ? "Tirar admin" : "Tornar admin"; ad.hidden = !p.approved;
-    if (st.me && p.id === st.me.id){ ap.hidden = true; ad.hidden = true; }
+    const rm = it.querySelector('[data-a="rm"]');
+    if (st.me && p.id === st.me.id){ ap.hidden = true; ad.hidden = true; rm.hidden = true; }
+    armButton(rm, "Remover", async () => {
+      const x = await SB.rpc("admin_delete_user", { uid: p.id });
+      if (x.error) toast("Não deu para remover" + errHint(x.error), 3800); else toast("Conta removida");
+      loadTeam(false);
+    });
     ap.addEventListener("click", async () => {
       const x = await SB.from("profiles").update({ approved: !p.approved, is_admin: p.approved ? false : p.is_admin }).eq("id", p.id);
       if (x.error) toast("Não deu" + errHint(x.error)); else toast(p.approved ? "Acesso bloqueado" : "Acesso liberado");
@@ -1610,7 +2002,10 @@ async function loadTeam(notify = true){
     if (ev === "SIGNED_OUT"){ entered = false; showAuth("authForm"); return; }
     if (ev === "SIGNED_IN" || ev === "INITIAL_SESSION") setTimeout(() => enter(session), 0);
   });
-  document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible" && entered) loadAll(); });
+  document.addEventListener("visibilitychange", async () => {
+    if (document.visibilityState !== "visible" || !entered || recovering) return;
+    entered = false; enter((await SB.auth.getSession()).data.session);
+  });
 })();
 if ("serviceWorker" in navigator) window.addEventListener("load", () => navigator.serviceWorker.register("sw.js").catch(() => {}));
 })();
