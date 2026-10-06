@@ -210,9 +210,29 @@ input[type=range]:disabled{opacity:.4}
 .prog summary{cursor:pointer;font-weight:800;padding:10px 0;display:flex;align-items:center;gap:8px;list-style:none}
 .prog summary::-webkit-details-marker{display:none}
 .prow{display:grid;grid-template-columns:44px minmax(0,1fr);gap:6px 8px;align-items:center;padding:8px 0;border-top:1px solid var(--line)}
-.prow b{font-size:13px;grid-row:span 2}
+.prow b{font-size:13px;grid-row:span 3}
 .prow input{width:100%;min-width:0;border:1.5px solid var(--line);background:var(--panel);border-radius:10px;padding:8px 10px;font-size:14px}
-@media (max-width:899px){.stage canvas{max-height:56vh;width:auto;max-width:100%;margin:0 auto}}
+@media (max-width:899px){
+  .stage canvas{max-height:56vh;width:auto;max-width:100%;margin:0 auto}
+  #v-mont .stage,#v-arte .stage{position:sticky;top:0;z-index:6;padding:8px;margin:0 -6px;box-shadow:0 10px 24px rgba(0,0,0,.18)}
+  #v-mont .stage canvas{max-height:40vh}
+  #v-arte .stage canvas{max-height:34vh}
+  .erasebar .btn.small{padding:6px 9px;font-size:12.5px}
+  #v-mont .stage .hint{display:none}
+  #v-arte .stage .hint{font-size:12px;margin-top:6px}
+  #v-mont .zbar{margin-top:6px;padding:4px}
+  #v-mont .zb{width:36px;height:36px}
+}
+.layers{display:grid;grid-template-columns:repeat(4,1fr);gap:5px;margin-top:8px}
+.layers button{border:2px solid var(--line);background:var(--panel2);border-radius:12px;padding:8px 0;font-weight:800;font-size:13px;color:var(--muted);cursor:pointer}
+.layers button[aria-pressed="true"]{border-color:var(--accent);background:var(--accent);color:var(--accent-ink)}
+.layers button:disabled{opacity:.4}
+.erasebar{margin-top:8px;padding:6px 10px;border-radius:14px;background:var(--panel2)}
+.erasebar .row{margin-top:4px}
+.prow .cp{grid-column:2;justify-self:end;padding:4px 10px}
+.erow{display:grid;gap:6px;padding:10px 0;border-top:1px solid var(--line)}
+.erow input,.erow select{width:100%;min-width:0;border:1.5px solid var(--line);background:var(--panel);border-radius:10px;padding:8px 10px;font-size:14px}
+.erow select{width:auto}
 .zbar{display:flex;align-items:center;gap:6px;margin-top:10px;padding:6px;border-radius:14px;background:var(--panel2)}
 .zbar input{flex:1;min-width:60px}
 .zb{width:40px;height:40px;border-radius:12px;border:1.5px solid var(--line);background:var(--panel);font-size:19px;font-weight:800;cursor:pointer;flex:none;display:grid;place-items:center;color:var(--text)}
@@ -440,9 +460,18 @@ textarea.tin{min-height:72px;resize:vertical;margin-top:8px}
 
 <!-- ARTE DO DIA -->
 <section class="view split" id="v-arte">
-  <div class="stage">
+  <div class="stage artstage">
     <canvas id="artPv" width="1080" height="1350" aria-label="Prévia da arte do dia"></canvas>
-    <p class="hint"><svg class="i"><use href="#i-hand"/></svg>Arraste a arte para enquadrar e use dois dedos para dar zoom.</p>
+    <div class="layers" id="artLayers" role="tablist" aria-label="O que mexer com o dedo"></div>
+    <div class="erasebar" id="eraseBar" hidden>
+      <label class="sl">Pincel <input type="range" id="brush" min="10" max="160" value="50"><span class="v" id="brushV">50</span></label>
+      <div class="row">
+        <button class="btn small primary" id="eraseGo"><svg class="i"><use href="#i-spark"/></svg>Apagar marcado</button>
+        <button class="btn small" id="eraseClear">Limpar</button>
+        <button class="btn small" id="eraseUndo">Desfazer</button>
+      </div>
+    </div>
+    <p class="hint" id="artHint"></p>
   </div>
   <div class="panel">
     <div class="ptitle"><span class="ic"><svg class="i"><use href="#i-art"/></svg></span><h2>Arte do dia</h2></div>
@@ -451,13 +480,13 @@ textarea.tin{min-height:72px;resize:vertical;margin-top:8px}
 
     <h3>Dia da reunião</h3>
     <div class="days" id="dayChips"></div>
+    <div class="chips small" id="extraChips" style="margin-top:8px"></div>
     <label class="field"><span>Destaque (horário)</span><input type="text" class="tin" id="artHours" placeholder="Especialmente às 19h30"></label>
     <label class="field"><span>Endereço</span><input type="text" class="tin" id="artAddr" list="addrOpts" placeholder="R. XV de Novembro, 1360 - Planalto/Artur Nogueira"></label>
     <p class="muted" style="margin-top:-2px">Mudar aqui vale só para esta arte. A programação fixa fica no fim desta aba.</p>
 
     <h3>Proporção</h3>
     <div class="chips" id="artFmtChips"></div>
-    <div class="box" style="margin-top:8px"><label class="sl">Zoom <input type="range" id="artZoom" min="1" max="4" step="0.01" value="1"><span class="v" id="artZoomV">1.0×</span></label></div>
 
     <h3>Igreja ao fundo</h3>
     <div class="chips" id="churchMode"></div>
@@ -467,24 +496,29 @@ textarea.tin{min-height:72px;resize:vertical;margin-top:8px}
     </div>
     <div class="row" style="margin-top:8px">
       <label class="btn filebtn small">Outra foto de igreja só hoje<input id="artBgIn" type="file" accept="image/*"></label>
+      <button class="btn small" id="chReset">Centralizar igreja</button>
     </div>
     <p class="muted" id="artBgNote"></p>
 
     <h3>Texto</h3>
     <div class="chips" id="txtCase"></div>
     <div class="box" style="margin-top:8px">
-      <label class="sl">Destaque <input type="range" id="txtSize" min="30" max="130" value="78"><span class="v" id="txtSizeV">78</span></label>
-      <label class="sl">Endereço <input type="range" id="addrSize" min="20" max="80" value="44"><span class="v" id="addrSizeV">44</span></label>
-      <label class="sl">Altura <input type="range" id="txtY" min="2" max="45" value="5"><span class="v" id="txtYV">5%</span></label>
+      <label class="sl">Destaque <input type="range" id="txtSize" min="24" max="130" value="58"><span class="v" id="txtSizeV">58</span></label>
+      <label class="sl">Endereço <input type="range" id="addrSize" min="16" max="80" value="34"><span class="v" id="addrSizeV">34</span></label>
       <label class="sl">Sombra <input type="range" id="shadeOp" min="0" max="100" value="45"><span class="v" id="shadeOpV">45%</span></label>
     </div>
+    <button class="btn small" id="txReset" style="margin-top:8px">Voltar texto ao lugar padrão</button>
 
     <details class="prog" id="progBox">
       <summary><svg class="i"><use href="#i-pin"/></svg>Programação da semana</summary>
       <p class="muted">Preencha uma vez. Ao abrir a Arte do dia, o app já escolhe o dia de hoje. Fica salvo para toda a equipe.</p>
       <div id="progRows"></div>
+      <button class="btn small" id="progSameAddr" style="margin-top:8px">Copiar endereço para os dias vazios</button>
+      <h3>Cultos e eventos extras</h3>
+      <p class="muted">Culto jovem, evento especial… Aparecem como botão no dia escolhido.</p>
+      <div id="extraRows"></div>
       <div class="row" style="margin-top:10px">
-        <button class="btn small" id="progSameAddr">Copiar endereço para os dias vazios</button>
+        <button class="btn small" id="extraAdd"><svg class="i"><use href="#i-plus"/></svg>Adicionar evento</button>
         <button class="btn primary small" id="progSave"><svg class="i"><use href="#i-check"/></svg>Salvar programação</button>
       </div>
     </details>
@@ -1419,7 +1453,7 @@ function applyCfg(){
   const prev = $("#bgPrev");
   if (src){
     prev.src = src; prev.hidden = false;
-    if (art.bgSrc !== src && !art.bgToday){ art.bgSrc = src; loadImage(src).then(i => { art.bg = i; drawArt(); }).catch(() => {}); }
+    if (art.bgSrc !== src && !art.bgToday){ art.bgSrc = src; loadImage(src).then(i => { art.bg = i; renderLayers(); drawArt(); }).catch(() => {}); }
   } else prev.hidden = true;
   $("#artBgNote").textContent = src || art.bgToday ? "" : "Suba a foto da igreja em Biblioteca para ela aparecer ao fundo.";
   drawArt();
@@ -1600,16 +1634,26 @@ const ART_FMTS = [
 ];
 const DIAS_CURTOS = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
 const PROG_KEY = "__programacao__";
+const TX_DEF = { txt: 58, addrTxt: 34, y: 5, xOff: 0 };
 const artPref = LS.get("artPref", {});
 const art = { img: null, bg: null, bgSrc: null, bgToday: false,
   fmt: ART_FMTS.find(f => f.id === artPref.fmt) || ART_FMTS[0], zoom: 1, ox: 0, oy: 0,
   church: artPref.church || "misturar", chOp: artPref.chOp ?? 35, chH: artPref.chH ?? 42,
-  upper: artPref.upper ?? true, txt: artPref.txt ?? 78, addrTxt: artPref.addrTxt ?? 44, y: artPref.y ?? 5, shade: artPref.shade ?? 45,
-  day: new Date().getDay() };
-function saveArtPref(){ LS.set("artPref", { fmt: art.fmt.id, church: art.church, chOp: art.chOp, chH: art.chH, upper: art.upper, txt: art.txt, addrTxt: art.addrTxt, y: art.y, shade: art.shade }); }
-st.prog = Array.from({ length: 7 }, () => ({ h: "", a: "" }));
-function normProg(p){ return Array.from({ length: 7 }, (_, i) => ({ h: String((p && p[i] && p[i].h) || ""), a: String((p && p[i] && p[i].a) || "") })); }
+  ch: Object.assign({ zoom: 1, ox: 0, oy: 0 }, artPref.ch || {}),
+  upper: artPref.upper ?? true, txt: artPref.txt ?? TX_DEF.txt, addrTxt: artPref.addrTxt ?? TX_DEF.addrTxt,
+  y: artPref.y ?? TX_DEF.y, xOff: artPref.xOff ?? 0, shade: artPref.shade ?? 45,
+  day: new Date().getDay(), extra: null, layer: "arte", mask: null, maskDirty: false, undo: [], brush: 50 };
+function saveArtPref(){ LS.set("artPref", { fmt: art.fmt.id, church: art.church, chOp: art.chOp, chH: art.chH, ch: art.ch, upper: art.upper, txt: art.txt, addrTxt: art.addrTxt, y: art.y, xOff: art.xOff, shade: art.shade }); }
+st.prog = { dias: Array.from({ length: 7 }, () => ({ h: "", a: "" })), extras: [] };
+function normProg(p){
+  const dias = Array.isArray(p) ? p : (p && p.dias) || [];
+  return {
+    dias: Array.from({ length: 7 }, (_, i) => ({ h: String((dias[i] && dias[i].h) || ""), a: String((dias[i] && dias[i].a) || "") })),
+    extras: ((p && p.extras) || []).map(e => ({ id: e.id || uid(), n: String(e.n || ""), d: e.d == null ? -1 : +e.d, h: String(e.h || ""), a: String(e.a || "") }))
+  };
+}
 
+/* chips e formatos */
 function renderArtFmts(){
   const box = $("#artFmtChips"); box.innerHTML = "";
   ART_FMTS.forEach(f => {
@@ -1620,44 +1664,108 @@ function renderArtFmts(){
     box.appendChild(b);
   });
 }
-function renderArtChips(){
-  chipGroup($("#churchMode"), [["misturar", "Misturada"], ["suave", "Suave"], ["nao", "Sem igreja"]], () => art.church, v => { art.church = v; saveArtPref(); }, drawArt);
-  chipGroup($("#txtCase"), [[true, "MAIÚSCULAS"], [false, "Como digitado"]], () => art.upper, v => { art.upper = v; saveArtPref(); }, drawArt);
+function syncArtSliders(){
   const set = (id, v, f) => { $("#" + id).value = v; $("#" + id + "V").textContent = f(v); };
-  set("chOp", art.chOp, v => v + "%"); set("chH", art.chH, v => v + "%"); set("txtSize", art.txt, v => v);
-  set("addrSize", art.addrTxt, v => v); set("txtY", art.y, v => v + "%"); set("shadeOp", art.shade, v => v + "%");
+  set("chOp", art.chOp, v => v + "%"); set("chH", art.chH, v => v + "%"); set("txtSize", Math.round(art.txt), v => v);
+  set("addrSize", Math.round(art.addrTxt), v => v); set("shadeOp", art.shade, v => v + "%"); set("brush", art.brush, v => v);
 }
+function renderArtChips(){
+  chipGroup($("#churchMode"), [["misturar", "Misturada"], ["suave", "Suave"], ["nao", "Sem igreja"]], () => art.church, v => { art.church = v; saveArtPref(); renderLayers(); }, drawArt);
+  chipGroup($("#txtCase"), [[true, "MAIÚSCULAS"], [false, "Como digitado"]], () => art.upper, v => { art.upper = v; saveArtPref(); }, drawArt);
+  syncArtSliders(); renderLayers();
+}
+const LAYERS = [["arte", "Arte"], ["igreja", "Igreja"], ["texto", "Texto"], ["apagar", "Apagar"]];
+const LAYER_HINT = {
+  arte: "Arraste para enquadrar. Dois dedos para zoom.",
+  igreja: "Arraste a igreja. Dois dedos para zoom.",
+  texto: "Arraste o texto. Dois dedos para aumentar ou diminuir.",
+  apagar: "Pinte o que quer sumir. Melhor em coisas pequenas sobre fundo simples."
+};
+function renderLayers(){
+  const box = $("#artLayers"); box.innerHTML = "";
+  LAYERS.forEach(([v, n]) => {
+    const b = document.createElement("button"); b.textContent = n; b.setAttribute("aria-pressed", art.layer === v);
+    if (v === "igreja" && (art.church === "nao" || !art.bg)) b.disabled = true;
+    b.addEventListener("click", () => { art.layer = v; renderLayers(); drawArt(); });
+    box.appendChild(b);
+  });
+  if (art.layer === "igreja" && (art.church === "nao" || !art.bg)) art.layer = "arte";
+  $("#eraseBar").hidden = art.layer !== "apagar";
+  $("#artHint").textContent = LAYER_HINT[art.layer];
+}
+
+/* dias e programação */
 function renderDays(){
   const box = $("#dayChips"); box.innerHTML = ""; const today = new Date().getDay();
   DIAS_CURTOS.forEach((d, i) => {
-    const b = document.createElement("button"); b.textContent = d; b.setAttribute("aria-pressed", i === art.day);
+    const b = document.createElement("button"); b.textContent = d; b.setAttribute("aria-pressed", i === art.day && !art.extra);
     if (i === today) b.className = "today";
     b.addEventListener("click", () => applyDay(i, true));
     box.appendChild(b);
   });
+  const ex = $("#extraChips"); ex.innerHTML = "";
+  st.prog.extras.filter(e => e.d === -1 || e.d === art.day).forEach(e => {
+    const b = document.createElement("button"); b.className = "chip txt"; b.setAttribute("aria-pressed", art.extra === e.id);
+    b.textContent = e.n || "Evento";
+    b.addEventListener("click", () => applyExtra(e));
+    ex.appendChild(b);
+  });
+  ex.hidden = !ex.children.length;
+}
+function fillFields(h, a, force){
+  const hEl = $("#artHours"), aEl = $("#artAddr");
+  if (force || !hEl.dataset.touched){ hEl.value = h; delete hEl.dataset.touched; }
+  if (force || !aEl.dataset.touched){ aEl.value = a; delete aEl.dataset.touched; }
+  drawArt();
 }
 function applyDay(i, force){
-  art.day = i; renderDays();
-  const p = st.prog[i] || { h: "", a: "" };
-  const hEl = $("#artHours"), aEl = $("#artAddr");
-  if (force || !hEl.dataset.touched) { hEl.value = p.h; delete hEl.dataset.touched; }
-  if (force || !aEl.dataset.touched) { aEl.value = p.a; delete aEl.dataset.touched; }
-  drawArt();
+  art.day = i; art.extra = null; renderDays();
+  const p = st.prog.dias[i] || { h: "", a: "" };
+  fillFields(p.h, p.a, force);
+}
+function applyExtra(e){
+  art.extra = e.id; renderDays();
+  fillFields(e.h, e.a || (st.prog.dias[art.day] || {}).a || "", true);
 }
 function renderProg(){
   const box = $("#progRows"); if (!box) return; box.innerHTML = "";
-  st.prog.forEach((p, i) => {
+  st.prog.dias.forEach((p, i) => {
     const r = document.createElement("div"); r.className = "prow";
-    r.innerHTML = '<b></b><input data-k="h" placeholder="Ex.: Especialmente às 19h30"><input data-k="a" list="addrOpts" placeholder="Endereço">';
+    r.innerHTML = '<b></b><input data-k="h" placeholder="Ex.: Especialmente às 19h30"><input data-k="a" list="addrOpts" placeholder="Endereço"><button class="btn small cp" title="Copiar como evento extra">Copiar</button>';
     r.querySelector("b").textContent = DIAS_CURTOS[i];
-    r.querySelectorAll("input").forEach(inp => { inp.value = p[inp.dataset.k]; inp.addEventListener("input", () => { p[inp.dataset.k] = inp.value; if (i === art.day) applyDay(i, true); }); });
+    r.querySelectorAll("input").forEach(inp => { inp.value = p[inp.dataset.k]; inp.addEventListener("input", () => { p[inp.dataset.k] = inp.value; if (i === art.day && !art.extra) fillFields(p.h, p.a, true); }); });
+    r.querySelector(".cp").addEventListener("click", () => {
+      st.prog.extras.push({ id: uid(), n: DIAS_CURTOS[i] + " (cópia)", d: i, h: p.h, a: p.a });
+      renderExtras(); renderDays(); toast("Copiado para Cultos e eventos extras. Mude o nome e o horário lá.", 3400);
+    });
     box.appendChild(r);
   });
   if (!$("#addrOpts")){ const dl = document.createElement("datalist"); dl.id = "addrOpts"; document.body.appendChild(dl); }
+  renderExtras();
 }
+function renderExtras(){
+  const box = $("#extraRows"); if (!box) return; box.innerHTML = "";
+  if (!st.prog.extras.length){ box.innerHTML = '<p class="muted" style="margin:0">Nenhum evento extra ainda.</p>'; return; }
+  st.prog.extras.forEach((e, idx) => {
+    const r = document.createElement("div"); r.className = "erow";
+    r.innerHTML = '<div class="row"><input data-k="n" placeholder="Nome (ex.: Culto jovem)" style="flex:1;min-width:120px"><select data-k="d"><option value="-1">Qualquer dia</option>' +
+      DIAS_CURTOS.map((d, i) => '<option value="' + i + '">' + d + "</option>").join("") + '</select><button class="btn small" data-x>Remover</button></div>' +
+      '<input data-k="h" placeholder="Destaque (ex.: Culto jovem às 19h30)"><input data-k="a" list="addrOpts" placeholder="Endereço (vazio = o do dia)">';
+    r.querySelectorAll("[data-k]").forEach(el => {
+      el.value = String(e[el.dataset.k]);
+      el.addEventListener(el.tagName === "SELECT" ? "change" : "input", () => {
+        e[el.dataset.k] = el.dataset.k === "d" ? +el.value : el.value;
+        renderDays(); if (art.extra === e.id) applyExtra(e);
+      });
+    });
+    r.querySelector("[data-x]").addEventListener("click", () => { st.prog.extras.splice(idx, 1); if (art.extra === e.id) applyDay(art.day, true); renderExtras(); renderDays(); });
+    box.appendChild(r);
+  });
+}
+$("#extraAdd").addEventListener("click", () => { st.prog.extras.push({ id: uid(), n: "", d: art.day, h: "", a: "" }); renderExtras(); renderDays(); });
 $("#progSameAddr").addEventListener("click", () => {
-  const first = st.prog.find(p => p.a.trim()); if (!first) return toast("Escreva o endereço em pelo menos um dia");
-  st.prog.forEach(p => { if (!p.a.trim()) p.a = first.a; }); renderProg(); applyDay(art.day, true); toast("Endereço copiado para os dias vazios");
+  const first = st.prog.dias.find(p => p.a.trim()); if (!first) return toast("Escreva o endereço em pelo menos um dia");
+  st.prog.dias.forEach(p => { if (!p.a.trim()) p.a = first.a; }); renderProg(); if (!art.extra) applyDay(art.day, true); toast("Endereço copiado para os dias vazios");
 });
 $("#progSave").addEventListener("click", async () => {
   if (!SB || !st.me) return toast("Entre na sua conta primeiro");
@@ -1672,20 +1780,174 @@ $("#progSave").addEventListener("click", async () => {
   }catch(e){ toast("Não deu para salvar" + errHint(e), 3600); }
   finally{ btn.disabled = false; }
 });
+
+/* arquivos */
+function resetMask(){ art.mask = null; art.maskDirty = false; }
 $("#artIn").addEventListener("change", async e => {
   const f = e.target.files[0]; e.target.value = ""; if (!f) return;
-  try{ art.img = await fileToWork(f); art.zoom = 1; art.ox = 0; art.oy = 0; drawArt(); sessSaveArt(); }
+  try{ art.img = await fileToWork(f); art.zoom = 1; art.ox = 0; art.oy = 0; art.undo = []; resetMask(); drawArt(); sessSaveArt(); }
   catch(err){ toast("Não deu para abrir a arte"); }
 });
 $("#artBgIn").addEventListener("change", async e => {
   const f = e.target.files[0]; e.target.value = ""; if (!f) return;
-  try{ art.bg = await fileToWork(f); art.bgToday = true; if (art.church === "nao"){ art.church = "misturar"; renderArtChips(); } applyCfg(); }catch(err){ toast("Não deu para abrir a foto"); }
+  try{ art.bg = await fileToWork(f); art.bgToday = true; if (art.church === "nao"){ art.church = "misturar"; } renderArtChips(); applyCfg(); }catch(err){ toast("Não deu para abrir a foto"); }
 });
-[["chOp", "chOp", "%"], ["chH", "chH", "%"], ["txtSize", "txt", ""], ["addrSize", "addrTxt", ""], ["txtY", "y", "%"], ["shadeOp", "shade", "%"]].forEach(([id, k, u]) =>
+[["chOp", "chOp", "%"], ["chH", "chH", "%"], ["txtSize", "txt", ""], ["addrSize", "addrTxt", ""], ["shadeOp", "shade", "%"]].forEach(([id, k, u]) =>
   bindRange(id, v => v + u, v => { art[k] = v; saveArtPref(); drawArt(); }));
-$("#artZoom").addEventListener("input", e => { art.zoom = +e.target.value; drawArt(); });
+bindRange("brush", v => v, v => { art.brush = v; });
+$("#chReset").addEventListener("click", () => { art.ch = { zoom: 1, ox: 0, oy: 0 }; saveArtPref(); drawArt(); });
+$("#txReset").addEventListener("click", () => { Object.assign(art, TX_DEF); saveArtPref(); syncArtSliders(); drawArt(); });
 ["artAddr", "artHours"].forEach(id => $("#" + id).addEventListener("input", e => { e.target.dataset.touched = 1; drawArt(); }));
-attachPanZoom($("#artPv"), () => art.img ? { cell: { x: 0, y: 0, w: art.fmt.w, h: art.fmt.h }, slot: art, img: art.img } : null, () => drawArt());
+
+/* geometria */
+function artXf(){
+  const W = art.fmt.w, H = art.fmt.h, img = art.img;
+  const sc = Math.max(W / img.width, H / img.height) * art.zoom;
+  const dw = img.width * sc, dh = img.height * sc;
+  return { sc, x: -(dw - W) * (art.ox + 1) / 2, y: -(dh - H) * (art.oy + 1) / 2 };
+}
+function chBandH(){ return Math.round(art.fmt.h * art.chH / 100); }
+
+/* gestos no canvas */
+(() => {
+  const cv = $("#artPv"), pts = new Map(); let g = null;
+  const toC = e => { const r = cv.getBoundingClientRect(); return { x: (e.clientX - r.left) * cv.width / r.width, y: (e.clientY - r.top) * cv.height / r.height }; };
+  const pan = (slot, cell, img, dx, dy) => {
+    const sc = Math.max(cell.w / img.width, cell.h / img.height) * slot.zoom;
+    const sx = img.width * sc - cell.w, sy = img.height * sc - cell.h;
+    if (sx > 1) slot.ox = clamp(slot.ox - 2 * dx / sx, -1, 1);
+    if (sy > 1) slot.oy = clamp(slot.oy - 2 * dy / sy, -1, 1);
+  };
+  const paint = (a, b) => {
+    if (!art.img) return;
+    if (!art.mask){ art.mask = document.createElement("canvas"); art.mask.width = art.img.width; art.mask.height = art.img.height; }
+    const t = artXf(), m = art.mask.getContext("2d");
+    m.strokeStyle = m.fillStyle = "#fff"; m.lineCap = m.lineJoin = "round"; m.lineWidth = art.brush / t.sc;
+    m.beginPath(); m.moveTo((a.x - t.x) / t.sc, (a.y - t.y) / t.sc); m.lineTo((b.x - t.x) / t.sc, (b.y - t.y) / t.sc); m.stroke();
+    art.maskDirty = true;
+  };
+  cv.addEventListener("pointerdown", e => {
+    const p = toC(e); pts.set(e.pointerId, p);
+    try{ cv.setPointerCapture(e.pointerId); }catch(_){}
+    if (pts.size === 1){ g = { last: p, dist: 0 }; if (art.layer === "apagar"){ paint(p, p); drawArt(); } }
+    else if (pts.size === 2 && g){
+      const [a, b] = [...pts.values()]; g.dist = Math.hypot(a.x - b.x, a.y - b.y) || 1;
+      g.z0 = art.layer === "igreja" ? art.ch.zoom : art.layer === "texto" ? [art.txt, art.addrTxt] : art.zoom;
+    }
+  });
+  cv.addEventListener("pointermove", e => {
+    if (!pts.has(e.pointerId) || !g) return;
+    const p = toC(e); pts.set(e.pointerId, p);
+    if (pts.size >= 2 && g.dist){
+      if (art.layer === "apagar") return;
+      const [a, b] = [...pts.values()], r = Math.hypot(a.x - b.x, a.y - b.y) / g.dist;
+      if (art.layer === "texto"){ art.txt = clamp(g.z0[0] * r, 20, 160); art.addrTxt = clamp(g.z0[1] * r, 14, 110); syncArtSliders(); }
+      else if (art.layer === "igreja") art.ch.zoom = clamp(g.z0 * r, 1, 4);
+      else art.zoom = clamp(g.z0 * r, 1, 4);
+      drawArt(); return;
+    }
+    const dx = p.x - g.last.x, dy = p.y - g.last.y;
+    if (art.layer === "apagar") paint(g.last, p);
+    else if (art.layer === "texto"){ art.xOff = clamp(art.xOff + dx / art.fmt.w, -.45, .45); art.y = clamp(art.y - dy / art.fmt.h * 100, -10, 92); }
+    else if (art.layer === "igreja" && art.bg) pan(art.ch, { w: art.fmt.w, h: chBandH() }, art.bg, dx, dy);
+    else if (art.img) pan(art, { w: art.fmt.w, h: art.fmt.h }, art.img, dx, dy);
+    g.last = p; drawArt();
+  });
+  const up = e => {
+    pts.delete(e.pointerId);
+    if (!pts.size){ if (g && art.layer !== "apagar") saveArtPref(); g = null; }
+    else if (g){ g.last = [...pts.values()][0]; g.dist = 0; }
+  };
+  cv.addEventListener("pointerup", up); cv.addEventListener("pointercancel", up);
+  cv.addEventListener("wheel", e => {
+    e.preventDefault(); const f = e.deltaY < 0 ? 1.06 : 1 / 1.06;
+    if (art.layer === "texto"){ art.txt = clamp(art.txt * f, 20, 160); art.addrTxt = clamp(art.addrTxt * f, 14, 110); syncArtSliders(); saveArtPref(); }
+    else if (art.layer === "igreja"){ art.ch.zoom = clamp(art.ch.zoom * f, 1, 4); saveArtPref(); }
+    else if (art.layer === "arte") art.zoom = clamp(art.zoom * f, 1, 4);
+    drawArt();
+  }, { passive: false });
+})();
+
+/* apagar: preenche a área marcada com as cores em volta */
+function inpaint(img, mask){
+  const W = img.width, H = img.height;
+  const md = mask.getContext("2d").getImageData(0, 0, W, H).data;
+  let x0 = W, y0 = H, x1 = -1, y1 = -1;
+  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) if (md[(y * W + x) * 4 + 3] > 20){ if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; }
+  if (x1 < 0) return false;
+  const pad = Math.max(24, Math.round(Math.max(x1 - x0, y1 - y0) * .35));
+  x0 = Math.max(0, x0 - pad); y0 = Math.max(0, y0 - pad); x1 = Math.min(W - 1, x1 + pad); y1 = Math.min(H - 1, y1 + pad);
+  const w = x1 - x0 + 1, h = y1 - y0 + 1;
+  const ctx = img.getContext("2d", { willReadFrequently: true });
+  const id = ctx.getImageData(x0, y0, w, h), d = id.data;
+  const levels = [];
+  let L = { w, h, r: new Float32Array(w * h), g: new Float32Array(w * h), b: new Float32Array(w * h), k: new Float32Array(w * h) };
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++){
+    const i = y * w + x, m = md[((y + y0) * W + (x + x0)) * 4 + 3] > 20 ? 0 : 1;
+    L.k[i] = m; L.r[i] = d[i * 4] * m; L.g[i] = d[i * 4 + 1] * m; L.b[i] = d[i * 4 + 2] * m;
+  }
+  levels.push(L);
+  while (L.w > 1 || L.h > 1){
+    const nw = Math.max(1, Math.ceil(L.w / 2)), nh = Math.max(1, Math.ceil(L.h / 2));
+    const N = { w: nw, h: nh, r: new Float32Array(nw * nh), g: new Float32Array(nw * nh), b: new Float32Array(nw * nh), k: new Float32Array(nw * nh) };
+    for (let y = 0; y < nh; y++) for (let x = 0; x < nw; x++){
+      let r = 0, gg = 0, bb = 0, k = 0;
+      for (let dy = 0; dy < 2; dy++) for (let dx = 0; dx < 2; dx++){
+        const sx = Math.min(L.w - 1, x * 2 + dx), sy = Math.min(L.h - 1, y * 2 + dy), j = sy * L.w + sx;
+        r += L.r[j]; gg += L.g[j]; bb += L.b[j]; k += L.k[j];
+      }
+      const i = y * nw + x;
+      if (k > 0){ N.r[i] = r / k; N.g[i] = gg / k; N.b[i] = bb / k; N.k[i] = Math.min(1, k); }
+      N.r[i] *= N.k[i] ? 1 : 0;
+    }
+    for (let i = 0; i < nw * nh; i++){ N.r[i] *= N.k[i]; N.g[i] *= N.k[i]; N.b[i] *= N.k[i]; }
+    levels.push(N); L = N;
+  }
+  const col = lv => { const n = lv.w * lv.h, o = { r: new Float32Array(n), g: new Float32Array(n), b: new Float32Array(n) };
+    for (let i = 0; i < n; i++){ const k = lv.k[i] || 1e-6; o.r[i] = lv.r[i] / k; o.g[i] = lv.g[i] / k; o.b[i] = lv.b[i] / k; } return o; };
+  let C = col(levels[levels.length - 1]);
+  for (let li = levels.length - 2; li >= 0; li--){
+    const lv = levels[li], up = levels[li + 1], cc = col(lv), n = lv.w * lv.h;
+    for (let y = 0; y < lv.h; y++) for (let x = 0; x < lv.w; x++){
+      const i = y * lv.w + x, k = lv.k[i];
+      if (k >= 1) continue;
+      const fx = Math.min(up.w - 1, Math.max(0, (x - .5) / 2)), fy = Math.min(up.h - 1, Math.max(0, (y - .5) / 2));
+      const ax = Math.floor(fx), ay = Math.floor(fy), bx = Math.min(up.w - 1, ax + 1), by = Math.min(up.h - 1, ay + 1), tx = fx - ax, ty = fy - ay;
+      const s = (A, j) => A[j];
+      const bil = A => (s(A, ay * up.w + ax) * (1 - tx) + s(A, ay * up.w + bx) * tx) * (1 - ty) + (s(A, by * up.w + ax) * (1 - tx) + s(A, by * up.w + bx) * tx) * ty;
+      cc.r[i] = cc.r[i] * k + bil(C.r) * (1 - k); cc.g[i] = cc.g[i] * k + bil(C.g) * (1 - k); cc.b[i] = cc.b[i] * k + bil(C.b) * (1 - k);
+    }
+    C = cc;
+  }
+  let sum = 0, sum2 = 0, cnt = 0;
+  for (let i = 0; i < w * h; i++) if (levels[0].k[i]){ const l = (d[i * 4] + d[i * 4 + 1] + d[i * 4 + 2]) / 3; sum += l; sum2 += l * l; cnt++; }
+  const grain = cnt ? Math.min(10, Math.sqrt(Math.max(0, sum2 / cnt - (sum / cnt) ** 2)) * .12) : 0;
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++){
+    const i = y * w + x; if (levels[0].k[i]) continue;
+    const ma = md[((y + y0) * W + (x + x0)) * 4 + 3] / 255, n = (Math.random() - .5) * 2 * grain;
+    d[i * 4] = d[i * 4] * (1 - ma) + (C.r[i] + n) * ma; d[i * 4 + 1] = d[i * 4 + 1] * (1 - ma) + (C.g[i] + n) * ma; d[i * 4 + 2] = d[i * 4 + 2] * (1 - ma) + (C.b[i] + n) * ma;
+  }
+  ctx.putImageData(id, x0, y0);
+  return true;
+}
+$("#eraseGo").addEventListener("click", () => {
+  if (!art.img) return toast("Escolha a arte primeiro");
+  if (!art.mask || !art.maskDirty) return toast("Pinte com o dedo o que quer apagar");
+  const copy = document.createElement("canvas"); copy.width = art.img.width; copy.height = art.img.height; copy.getContext("2d").drawImage(art.img, 0, 0);
+  art.undo.push(copy); if (art.undo.length > 6) art.undo.shift();
+  const sm = document.createElement("canvas"); sm.width = art.mask.width; sm.height = art.mask.height;
+  const sx = sm.getContext("2d"); sx.filter = "blur(2px)"; sx.drawImage(art.mask, 0, 0); sx.drawImage(art.mask, 0, 0);
+  const ok = inpaint(art.img, sm);
+  resetMask(); drawArt(); sessSaveArt();
+  toast(ok ? "Apagado. Não ficou bom? Toque em Desfazer." : "Nada marcado");
+});
+$("#eraseClear").addEventListener("click", () => { resetMask(); drawArt(); });
+$("#eraseUndo").addEventListener("click", () => {
+  const c = art.undo.pop(); if (!c) return toast("Nada para desfazer");
+  art.img = c; resetMask(); drawArt(); sessSaveArt();
+});
+
+/* desenho */
 function wrapLines(ctx, text, maxW){
   const out = [];
   String(text).split("\n").forEach(par => {
@@ -1698,14 +1960,12 @@ function wrapLines(ctx, text, maxW){
 let fadeCv = null;
 function drawChurch(ctx, W, H){
   if (art.church === "nao" || !art.bg || !art.chOp) return;
-  const h = Math.round(H * art.chH / 100);
+  const h = chBandH();
   if (!fadeCv) fadeCv = document.createElement("canvas");
   fadeCv.width = W; fadeCv.height = h;
   const f = fadeCv.getContext("2d"); f.clearRect(0, 0, W, h);
-  const b = art.bg, sc = Math.max(W / b.width, h / b.height);
-  f.globalCompositeOperation = "source-over";
   if (art.church === "misturar") f.filter = "grayscale(.35) contrast(1.05)";
-  f.drawImage(b, (W - b.width * sc) / 2, (h - b.height * sc) / 2, b.width * sc, b.height * sc);
+  drawCover(f, art.bg, { x: 0, y: 0, w: W, h }, art.ch);
   f.filter = "none";
   const g = f.createLinearGradient(0, 0, 0, h);
   g.addColorStop(0, "rgba(0,0,0,1)"); g.addColorStop(.55, "rgba(0,0,0,.7)"); g.addColorStop(1, "rgba(0,0,0,0)");
@@ -1717,15 +1977,25 @@ function drawChurch(ctx, W, H){
   ctx.drawImage(fadeCv, 0, 0);
   ctx.restore();
 }
-function renderArt(ctx){
+function renderArt(ctx, preview){
   const W = art.fmt.w, H = art.fmt.h, k = Math.min(W, H) / 1080;
   ctx.fillStyle = "#121214"; ctx.fillRect(0, 0, W, H);
-  if (art.img) drawCover(ctx, art.img, { x: 0, y: 0, w: W, h: H }, art);
-  else {
+  if (art.img){
+    drawCover(ctx, art.img, { x: 0, y: 0, w: W, h: H }, art);
+    if (preview && art.mask && art.maskDirty){
+      const t = artXf(), tmp = document.createElement("canvas"); tmp.width = art.mask.width; tmp.height = art.mask.height;
+      const tc = tmp.getContext("2d"); tc.drawImage(art.mask, 0, 0); tc.globalCompositeOperation = "source-in"; tc.fillStyle = "rgba(255,40,60,.55)"; tc.fillRect(0, 0, tmp.width, tmp.height);
+      ctx.drawImage(tmp, t.x, t.y, art.img.width * t.sc, art.img.height * t.sc);
+    }
+  } else {
     ctx.fillStyle = "rgba(255,255,255,.45)"; ctx.font = "700 " + Math.round(44 * k) + "px Archivo, sans-serif";
     ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.fillText("Escolha a arte recebida", W / 2, H * .42);
   }
   drawChurch(ctx, W, H);
+  if (preview && art.layer === "igreja" && art.bg && art.church !== "nao"){
+    ctx.save(); ctx.setLineDash([14 * k, 10 * k]); ctx.strokeStyle = "rgba(255,255,255,.8)"; ctx.lineWidth = 3 * k;
+    ctx.strokeRect(4, 4, W - 8, chBandH() - 8); ctx.restore();
+  }
   let hl = $("#artHours").value.trim(), ad = $("#artAddr").value.trim();
   if (art.upper){ hl = hl.toLocaleUpperCase("pt-BR"); ad = ad.toLocaleUpperCase("pt-BR"); }
   if (!hl && !ad) return;
@@ -1733,8 +2003,7 @@ function renderArt(ctx){
   const fit = (txt, size, wgt) => {
     if (!txt) return { size, lines: [] };
     let sz = size; ctx.font = wgt + " " + sz + "px Oswald, 'Arial Narrow', sans-serif";
-    const longest = () => Math.max(...txt.split("\n").map(l => ctx.measureText(l).width));
-    const w = longest();
+    const w = Math.max(...txt.split("\n").map(l => ctx.measureText(l).width));
     if (w > maxW){ sz = Math.max(size * .62, size * maxW / w); ctx.font = wgt + " " + sz + "px Oswald, 'Arial Narrow', sans-serif"; }
     return { size: sz, lines: wrapLines(ctx, txt, maxW) };
   };
@@ -1742,8 +2011,7 @@ function renderArt(ctx){
   const hs = H1.size, as = A1.size, hL = H1.lines, aL = A1.lines;
   const gap = hL.length && aL.length ? as * .55 : 0;
   const blockH = hL.length * hs * 1.12 + gap + aL.length * as * 1.2;
-  const bottom = H - H * art.y / 100;
-  const top = bottom - blockH;
+  const bottom = H - H * art.y / 100, top = bottom - blockH, cx = W / 2 + art.xOff * W;
   if (art.shade){
     const st0 = Math.max(0, top - H * .18);
     const g = ctx.createLinearGradient(0, st0, 0, H);
@@ -1755,18 +2023,21 @@ function renderArt(ctx){
   ctx.shadowColor = "rgba(0,0,0,.65)"; ctx.shadowBlur = 18 * k; ctx.shadowOffsetY = 3 * k;
   let y = top;
   ctx.font = "600 " + hs + "px Oswald, 'Arial Narrow', sans-serif";
-  hL.forEach(l => { ctx.fillText(l, W / 2, y); y += hs * 1.12; });
+  hL.forEach(l => { ctx.fillText(l, cx, y); y += hs * 1.12; });
   y += gap;
   ctx.font = "500 " + as + "px Oswald, 'Arial Narrow', sans-serif";
-  aL.forEach(l => { ctx.fillText(l, W / 2, y); y += as * 1.2; });
+  aL.forEach(l => { ctx.fillText(l, cx, y); y += as * 1.2; });
   ctx.restore();
+  if (preview && art.layer === "texto"){
+    ctx.save(); ctx.setLineDash([14 * k, 10 * k]); ctx.strokeStyle = "rgba(255,255,255,.85)"; ctx.lineWidth = 3 * k;
+    ctx.strokeRect(W * .03, top - 12 * k, W * .94, blockH + 24 * k); ctx.restore();
+  }
 }
 function drawArt(){
   const cv = $("#artPv"); if (!cv) return;
   if (cv.width !== art.fmt.w || cv.height !== art.fmt.h){ cv.width = art.fmt.w; cv.height = art.fmt.h; }
-  renderArt(cv.getContext("2d"));
+  renderArt(cv.getContext("2d"), true);
   saveSession();
-  $("#artZoom").value = art.zoom; $("#artZoomV").textContent = art.zoom.toFixed(1) + "×";
 }
 
 /* ---------- Export ---------- */
@@ -1774,7 +2045,7 @@ async function makeBlob(kind){
   const f = kind === "art" ? art.fmt : st.fmt;
   const c = document.createElement("canvas"); c.width = f.w; c.height = f.h;
   const ctx = c.getContext("2d");
-  if (kind === "art") renderArt(ctx); else render(ctx, false);
+  if (kind === "art") renderArt(ctx, false); else render(ctx, false);
   return new Promise(r => c.toBlob(r, "image/jpeg", .93));
 }
 async function exportCanvas(kind){
