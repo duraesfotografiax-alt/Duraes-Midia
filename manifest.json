@@ -1,13 +1,13 @@
 {
-  "name": "Mídia FJU | Estúdio de montagens",
-  "short_name": "Mídia FJU",
-  "description": "Montagens de fotos do Projeto Mídia da FJU. Desenvolvido por Durães.",
+  "name": "Durães | Estúdio da Mídia",
+  "short_name": "Durães",
+  "description": "Montagens de fotos da igreja para Instagram e Facebook",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
   "orientation": "portrait",
-  "background_color": "#0b2350",
-  "theme_color": "#10386a",
+  "background_color": "#141414",
+  "theme_color": "#eb5b02",
   "lang": "pt-BR",
   "icons": [
     { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
