@@ -7,7 +7,7 @@
 <title>Durães | Estúdio da Mídia</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800;900&family=Oswald:wght@500;600;700&display=swap" rel="stylesheet">
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="icon-192.png">
 <link rel="apple-touch-icon" href="icon-192.png">
@@ -202,6 +202,16 @@ input[type=range]:disabled{opacity:.4}
 .toolbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;justify-content:space-between;padding:10px;border-radius:16px;background:var(--panel2);margin-top:12px}
 .toolbar .count{font-weight:800;font-size:14px;padding-left:4px}
 [hidden]{display:none!important}
+.days{display:grid;grid-template-columns:repeat(7,1fr);gap:5px}
+.days button{border:2px solid var(--line);background:var(--panel2);border-radius:12px;padding:9px 0;font-weight:800;font-size:12.5px;color:var(--muted);cursor:pointer}
+.days button[aria-pressed="true"]{border-color:var(--accent);background:var(--accent-soft);color:var(--accent)}
+.days button.today::after{content:"•";display:block;line-height:.6;color:var(--accent)}
+.prog{margin-top:18px;border:1.5px solid var(--line);border-radius:16px;padding:4px 12px 12px;background:var(--panel2)}
+.prog summary{cursor:pointer;font-weight:800;padding:10px 0;display:flex;align-items:center;gap:8px;list-style:none}
+.prog summary::-webkit-details-marker{display:none}
+.prow{display:grid;grid-template-columns:44px minmax(0,1fr);gap:6px 8px;align-items:center;padding:8px 0;border-top:1px solid var(--line)}
+.prow b{font-size:13px;grid-row:span 2}
+.prow input{width:100%;min-width:0;border:1.5px solid var(--line);background:var(--panel);border-radius:10px;padding:8px 10px;font-size:14px}
 @media (max-width:899px){.stage canvas{max-height:56vh;width:auto;max-width:100%;margin:0 auto}}
 .zbar{display:flex;align-items:center;gap:6px;margin-top:10px;padding:6px;border-radius:14px;background:var(--panel2)}
 .zbar input{flex:1;min-width:60px}
@@ -344,6 +354,7 @@ textarea.tin{min-height:72px;resize:vertical;margin-top:8px}
         <label class="btn primary filebtn wide"><svg class="i"><use href="#i-plus"/></svg>Adicionar fotos<input id="fileIn" type="file" accept="image/*" multiple></label>
         <button class="btn soft wide" id="aiPick" hidden><svg class="i"><use href="#i-spark"/></svg>Escolher com IA</button>
         <button class="btn wide" id="autoFill">Preencher em ordem</button>
+        <button class="btn wide" id="clearPhotos" hidden>Limpar fotos</button>
       </div>
       <p class="ai" id="aiStatus"></p>
       <div id="tray" class="tray"></div>
@@ -435,41 +446,48 @@ textarea.tin{min-height:72px;resize:vertical;margin-top:8px}
   </div>
   <div class="panel">
     <div class="ptitle"><span class="ic"><svg class="i"><use href="#i-art"/></svg></span><h2>Arte do dia</h2></div>
-    <p class="lead">Sobe a arte que chegou de São Paulo. Ela preenche a imagem inteira e o endereço entra numa faixa por cima.</p>
+    <p class="lead">Sobe a arte que chegou de São Paulo. A igreja entra ao fundo e o horário e o endereço do dia entram sozinhos.</p>
     <label class="btn primary filebtn big" style="width:100%"><svg class="i"><use href="#i-plus"/></svg>Escolher arte<input id="artIn" type="file" accept="image/*"></label>
+
+    <h3>Dia da reunião</h3>
+    <div class="days" id="dayChips"></div>
+    <label class="field"><span>Destaque (horário)</span><input type="text" class="tin" id="artHours" placeholder="Especialmente às 19h30"></label>
+    <label class="field"><span>Endereço</span><input type="text" class="tin" id="artAddr" list="addrOpts" placeholder="R. XV de Novembro, 1360 - Planalto/Artur Nogueira"></label>
+    <p class="muted" style="margin-top:-2px">Mudar aqui vale só para esta arte. A programação fixa fica no fim desta aba.</p>
 
     <h3>Proporção</h3>
     <div class="chips" id="artFmtChips"></div>
-    <p class="muted" id="artFmtNote" style="margin-top:8px"></p>
-    <div class="box"><label class="sl">Zoom <input type="range" id="artZoom" min="1" max="4" step="0.01" value="1"><span class="v" id="artZoomV">1.0×</span></label></div>
+    <div class="box" style="margin-top:8px"><label class="sl">Zoom <input type="range" id="artZoom" min="1" max="4" step="0.01" value="1"><span class="v" id="artZoomV">1.0×</span></label></div>
 
-    <h3>Endereço</h3>
-    <div class="chips small" id="addrChips"></div>
-    <label class="field"><span>Endereço desta arte</span><textarea id="artAddr" class="tin" placeholder="Rua, número, bairro, cidade"></textarea></label>
-    <div class="row">
-      <input class="tin" id="addrName" placeholder="Nome (ex.: Sede)" style="flex:1;min-width:140px">
-      <button class="btn small" id="addrSave">Salvar endereço</button>
-    </div>
-
-    <h3>Horários</h3>
-    <div class="chips small" id="hoursChips"></div>
-    <label class="field"><span>Horários desta arte (um por linha)</span><textarea id="artHours" class="tin" placeholder="Domingo: 7h, 9h30, 18h"></textarea></label>
-    <div class="row">
-      <input class="tin" id="hoursName" placeholder="Nome (ex.: Domingo)" style="flex:1;min-width:140px">
-      <button class="btn small" id="hoursSave">Salvar horários</button>
-    </div>
-
-    <h3>Faixa do endereço</h3>
-    <div class="chips" id="bandPos"></div>
-    <div class="chips" id="bandBg" style="margin-top:8px"></div>
+    <h3>Igreja ao fundo</h3>
+    <div class="chips" id="churchMode"></div>
     <div class="box" style="margin-top:8px">
-      <label class="sl">Fundo <input type="range" id="bandOp" min="20" max="100" value="80"><span class="v" id="bandOpV">80%</span></label>
-      <label class="sl">Texto <input type="range" id="txtSize" min="18" max="60" value="32"><span class="v" id="txtSizeV">32</span></label>
+      <label class="sl">Visibilidade <input type="range" id="chOp" min="0" max="100" value="35"><span class="v" id="chOpV">35%</span></label>
+      <label class="sl">Altura <input type="range" id="chH" min="15" max="80" value="42"><span class="v" id="chHV">42%</span></label>
     </div>
-    <div class="row" style="margin-top:10px">
-      <label class="btn filebtn small">Outra foto de fundo só hoje<input id="artBgIn" type="file" accept="image/*"></label>
+    <div class="row" style="margin-top:8px">
+      <label class="btn filebtn small">Outra foto de igreja só hoje<input id="artBgIn" type="file" accept="image/*"></label>
     </div>
     <p class="muted" id="artBgNote"></p>
+
+    <h3>Texto</h3>
+    <div class="chips" id="txtCase"></div>
+    <div class="box" style="margin-top:8px">
+      <label class="sl">Destaque <input type="range" id="txtSize" min="30" max="130" value="78"><span class="v" id="txtSizeV">78</span></label>
+      <label class="sl">Endereço <input type="range" id="addrSize" min="20" max="80" value="44"><span class="v" id="addrSizeV">44</span></label>
+      <label class="sl">Altura <input type="range" id="txtY" min="2" max="45" value="5"><span class="v" id="txtYV">5%</span></label>
+      <label class="sl">Sombra <input type="range" id="shadeOp" min="0" max="100" value="45"><span class="v" id="shadeOpV">45%</span></label>
+    </div>
+
+    <details class="prog" id="progBox">
+      <summary><svg class="i"><use href="#i-pin"/></svg>Programação da semana</summary>
+      <p class="muted">Preencha uma vez. Ao abrir a Arte do dia, o app já escolhe o dia de hoje. Fica salvo para toda a equipe.</p>
+      <div id="progRows"></div>
+      <div class="row" style="margin-top:10px">
+        <button class="btn small" id="progSameAddr">Copiar endereço para os dias vazios</button>
+        <button class="btn primary small" id="progSave"><svg class="i"><use href="#i-check"/></svg>Salvar programação</button>
+      </div>
+    </details>
   </div>
 </section>
 
@@ -715,13 +733,105 @@ $("#fileIn").addEventListener("change", async e => {
       const ts = 240 / Math.max(work.width, work.height);
       tc.width = Math.round(work.width * ts); tc.height = Math.round(work.height * ts);
       tc.getContext("2d").drawImage(work, 0, 0, tc.width, tc.height);
-      st.photos.push({ id: uid(), name: f.name, work, thumb: tc.toDataURL("image/jpeg", .8), adj: defaultAdj(), proc: null, procKey: "" });
+      const ph = { id: uid(), name: f.name, work, thumb: tc.toDataURL("image/jpeg", .8), adj: defaultAdj(), proc: null, procKey: "" };
+      st.photos.push(ph); sessSavePhoto(ph, Date.now());
     }catch(err){ bad++; badType = f.type || f.name.split(".").pop(); }
   }
   stt.textContent = bad ? (files.length - bad) + " foto(s) abertas, " + bad + " não abriram (tipo: " + badType + "). Tente exportar essas fotos como JPG." : files.length + " foto(s) carregadas.";
   if (st.slots.every(s => !s.photoId)) autoFill();
   renderTray(); draw();
 });
+
+/* ---------- Sessão: fotos continuam ao sair e voltar ---------- */
+const SESS_DIAS = 3;
+let sessDB = null;
+const sessReady = new Promise(res => {
+  try{
+    const r = indexedDB.open("duraes-sessao", 1);
+    r.onupgradeneeded = () => r.result.createObjectStore("fotos", { keyPath: "id" });
+    r.onsuccess = () => { sessDB = r.result; res(sessDB); };
+    r.onerror = () => res(null);
+  }catch(e){ res(null); }
+});
+try{ if (navigator.storage && navigator.storage.persist) navigator.storage.persist(); }catch(e){}
+function sessStore(mode){ return sessDB ? sessDB.transaction("fotos", mode).objectStore("fotos") : null; }
+async function sessPut(o){ await sessReady; try{ const s = sessStore("readwrite"); if (s) s.put(o); }catch(e){} }
+async function sessDel(id){ await sessReady; try{ const s = sessStore("readwrite"); if (s) s.delete(id); }catch(e){} }
+async function sessAll(){
+  await sessReady;
+  return new Promise(res => { try{ const s = sessStore("readonly"); if (!s) return res([]); const r = s.getAll(); r.onsuccess = () => res(r.result || []); r.onerror = () => res([]); }catch(e){ res([]); } });
+}
+const canvasBlob = (c, q = .92) => new Promise(r => c.toBlob(r, "image/jpeg", q));
+async function sessSavePhoto(p, order){
+  const blob = await canvasBlob(p.work);
+  if (blob) sessPut({ id: p.id, name: p.name, blob, thumb: p.thumb, order });
+}
+let sessTimer = 0, sessRestoring = true;
+function saveSession(){
+  if (sessRestoring) return;
+  clearTimeout(sessTimer);
+  sessTimer = setTimeout(() => {
+    const adj = {}; st.photos.forEach(p => { adj[p.id] = p.adj; });
+    LS.set("sessao", { t: Date.now(), fmtId: st.fmt.id, layoutId: st.layoutId, gap: st.gap, sel: st.sel,
+      slots: st.slots.map(s => ({ photoId: s.photoId, zoom: s.zoom, ox: s.ox, oy: s.oy })), tx: st.tx, adj, order: st.photos.map(p => p.id),
+      arte: art.img ? { zoom: art.zoom, ox: art.ox, oy: art.oy } : null });
+  }, 400);
+}
+async function sessSaveArt(){
+  if (!art.img){ sessDel("__arte__"); return; }
+  const blob = await canvasBlob(art.img);
+  if (blob) sessPut({ id: "__arte__", name: "arte", blob, order: -1 });
+  saveSession();
+}
+async function clearSession(){
+  for (const p of st.photos) sessDel(p.id);
+  st.photos = []; st.slots.forEach(s => { s.photoId = null; s.zoom = 1; s.ox = 0; s.oy = 0; }); st.sel = 0;
+  renderTray(); draw(); syncAdjUI(); saveSession();
+  $("#aiStatus").textContent = "";
+  toast("Fotos removidas do app. As da galeria continuam no celular.", 3400);
+}
+async function restoreSession(){
+  try{
+    const ss = LS.get("sessao", null);
+    const rows = await sessAll();
+    if (!rows.length) return;
+    if (!ss || Date.now() - (ss.t || 0) > SESS_DIAS * 864e5){
+      rows.forEach(r => sessDel(r.id)); LS.set("sessao", null); return;
+    }
+    const order = ss.order || [];
+    const fotos = rows.filter(r => r.id !== "__arte__").sort((a, b) => {
+      const ia = order.indexOf(a.id), ib = order.indexOf(b.id);
+      return (ia < 0 ? 1e9 : ia) - (ib < 0 ? 1e9 : ib) || (a.order || 0) - (b.order || 0);
+    });
+    if (fotos.length) $("#aiStatus").textContent = "Recuperando " + fotos.length + " foto(s) da última edição…";
+    for (const r of fotos){
+      try{
+        const img = await decodeBlob(r.blob);
+        const c = document.createElement("canvas"); c.width = img.naturalWidth || img.width; c.height = img.naturalHeight || img.height;
+        c.getContext("2d").drawImage(img, 0, 0);
+        st.photos.push({ id: r.id, name: r.name, work: c, thumb: r.thumb, adj: Object.assign(defaultAdj(), (ss.adj || {})[r.id] || {}), proc: null, procKey: "" });
+      }catch(e){ sessDel(r.id); }
+    }
+    st.fmt = FORMATS.find(f => f.id === ss.fmtId) || st.fmt;
+    st._wantLayout = ss.layoutId;
+    if (allLayouts().find(l => l.id === ss.layoutId)){ st.layoutId = ss.layoutId; st._wantLayout = null; }
+    st.gap = ss.gap || 0; $("#gap").value = st.gap; $("#gapV").textContent = st.gap;
+    if (ss.tx) st.tx = Object.assign(st.tx, ss.tx);
+    st.slots = (ss.slots || []).map(s => Object.assign({ zoom: 1, ox: 0, oy: 0 }, s, { photoId: st.photos.find(p => p.id === s.photoId) ? s.photoId : null }));
+    st.sel = ss.sel || 0;
+    const ar = rows.find(r => r.id === "__arte__");
+    if (ar){
+      try{
+        const img = await decodeBlob(ar.blob);
+        const c = document.createElement("canvas"); c.width = img.naturalWidth || img.width; c.height = img.naturalHeight || img.height;
+        c.getContext("2d").drawImage(img, 0, 0); art.img = c;
+        if (ss.arte) Object.assign(art, ss.arte);
+      }catch(e){}
+    }
+    renderFormats(); renderLayoutChips(); renderTray(); syncTxUI(); draw(); drawArt(); syncAdjUI();
+    if (fotos.length) $("#aiStatus").textContent = fotos.length + " foto(s) da última edição recuperadas. Para começar do zero, toque em Limpar fotos.";
+  }finally{ sessRestoring = false; }
+}
 
 /* ---------- Image processing (Lightroom-like) ---------- */
 function curveLUT(pts){
@@ -870,6 +980,7 @@ function draw(){
     if (cv.width !== st.fmt.w || cv.height !== st.fmt.h){ cv.width = st.fmt.w; cv.height = st.fmt.h; }
     render(cv.getContext("2d"), true);
     renderTrayMarks(); syncFrameControls();
+    saveSession();
   });
 }
 
@@ -877,6 +988,7 @@ function draw(){
 function renderTray(){
   const tray = $("#tray"); tray.innerHTML = "";
   $("#trayEmpty").hidden = st.photos.length > 0;
+  $("#clearPhotos").hidden = !st.photos.length;
   st.photos.forEach(p => {
     const b = document.createElement("button");
     b.className = "thumb"; b.dataset.id = p.id; b.title = "Colocar no espaço selecionado";
@@ -911,6 +1023,7 @@ function autoFill(){
   st.slots.forEach((s, i) => { const p = st.photos[i]; s.photoId = p ? p.id : null; s.zoom = 1; s.ox = 0; s.oy = 0; });
   st.sel = 0; draw(); syncAdjUI();
 }
+armButton($("#clearPhotos"), "Limpar fotos", clearSession);
 $("#autoFill").addEventListener("click", () => { if (!st.photos.length) return toast("Adicione fotos primeiro"); autoFill(); });
 
 /* ---------- AI pick ---------- */
@@ -1308,7 +1421,7 @@ function applyCfg(){
     prev.src = src; prev.hidden = false;
     if (art.bgSrc !== src && !art.bgToday){ art.bgSrc = src; loadImage(src).then(i => { art.bg = i; drawArt(); }).catch(() => {}); }
   } else prev.hidden = true;
-  $("#artBgNote").textContent = src || art.bgToday ? "" : "Suba a foto da igreja em Biblioteca para usar no fundo da faixa.";
+  $("#artBgNote").textContent = src || art.bgToday ? "" : "Suba a foto da igreja em Biblioteca para ela aparecer ao fundo.";
   drawArt();
 }
 $("#bgIn").addEventListener("change", async e => {
@@ -1361,7 +1474,13 @@ async function loadSaved(){
     SB.from("horarios").select("*").order("created_at")
   ]);
   if (!a.error) st.addrs = a.data;
-  if (!h.error) st.hours = h.data;
+  if (!h.error){
+    const prog = h.data.filter(x => x.name === PROG_KEY);
+    st.progRows = prog; st.hours = h.data.filter(x => x.name !== PROG_KEY);
+    const last = prog[prog.length - 1];
+    if (last){ try{ st.prog = normProg(JSON.parse(last.text)); }catch(e){} }
+    renderProg(); applyDay(art.day, false);
+  }
   renderSaved();
 }
 function renderSaved(){
@@ -1376,10 +1495,7 @@ function renderSaved(){
       box.appendChild(b);
     });
   };
-  if (!$("#artAddr").dataset.touched && !$("#artAddr").value && st.addrs[0]) $("#artAddr").value = st.addrs[0].text;
-  if (!$("#artHours").dataset.touched && !$("#artHours").value && st.hours[0]) $("#artHours").value = st.hours[0].text;
-  fill($("#addrChips"), st.addrs, "#artAddr");
-  fill($("#hoursChips"), st.hours, "#artHours");
+  const dl = $("#addrOpts"); if (dl){ dl.innerHTML = ""; st.addrs.forEach(a => { const o = document.createElement("option"); o.value = a.text; dl.appendChild(o); }); }
   renderSimpleList($("#addrList"), st.addrs, it => it.text, it => delRow("enderecos", it, loadSaved));
   renderSimpleList($("#hoursList"), st.hours, it => it.text, it => delRow("horarios", it, loadSaved));
   drawArt();
@@ -1393,8 +1509,6 @@ async function saveSaved(table, nameEl, text, clearEl){
   nameEl.value = ""; if (clearEl) clearEl.value = "";
   await loadSaved(); toast("Salvo para toda a equipe");
 }
-$("#addrSave").addEventListener("click", () => saveSaved("enderecos", $("#addrName"), $("#artAddr").value));
-$("#hoursSave").addEventListener("click", () => saveSaved("horarios", $("#hoursName"), $("#artHours").value));
 $("#libAddrAdd").addEventListener("click", () => saveSaved("enderecos", $("#libAddrName"), $("#libAddrText").value, $("#libAddrText")));
 $("#libHoursAdd").addEventListener("click", () => saveSaved("horarios", $("#libHoursName"), $("#libHoursText").value, $("#libHoursText")));
 
@@ -1453,6 +1567,7 @@ $("#lySave").addEventListener("click", async () => {
   await loadLayouts(); $("#lyName").value = ""; toast("Modelo salvo: " + name);
 });
 function setLayouts(list){
+  if (st._wantLayout && list.find(l => l.id === st._wantLayout)){ st.layoutId = st._wantLayout; st._wantLayout = null; }
   st.customLayouts = list.slice().sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0));
   if (!allLayouts().find(l => l.id === st.layoutId)) st.layoutId = "b2";
   renderLayoutChips(); renderLyList(); draw();
@@ -1477,46 +1592,97 @@ function renderLyList(){
 
 /* ---------- Arte do dia ---------- */
 const ART_FMTS = [
-  { id: "916", name: "9:16", w: 1080, h: 1920 },
-  { id: "45", name: "4:5", w: 1080, h: 1350 },
+  { id: "45", name: "4:5 Feed", w: 1080, h: 1350 },
   { id: "34", name: "3:4", w: 1080, h: 1440 },
   { id: "11", name: "1:1", w: 1080, h: 1080 },
+  { id: "916", name: "9:16 Story", w: 1080, h: 1920 },
   { id: "169", name: "16:9", w: 1920, h: 1080 },
 ];
-const art = { img: null, bg: null, bgSrc: null, bgToday: false, fmt: ART_FMTS[1], zoom: 1, ox: 0, oy: 0, pos: "bottom", bgMode: "igreja", op: 80, txt: 32 };
+const DIAS_CURTOS = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
+const PROG_KEY = "__programacao__";
+const artPref = LS.get("artPref", {});
+const art = { img: null, bg: null, bgSrc: null, bgToday: false,
+  fmt: ART_FMTS.find(f => f.id === artPref.fmt) || ART_FMTS[0], zoom: 1, ox: 0, oy: 0,
+  church: artPref.church || "misturar", chOp: artPref.chOp ?? 35, chH: artPref.chH ?? 42,
+  upper: artPref.upper ?? true, txt: artPref.txt ?? 78, addrTxt: artPref.addrTxt ?? 44, y: artPref.y ?? 5, shade: artPref.shade ?? 45,
+  day: new Date().getDay() };
+function saveArtPref(){ LS.set("artPref", { fmt: art.fmt.id, church: art.church, chOp: art.chOp, chH: art.chH, upper: art.upper, txt: art.txt, addrTxt: art.addrTxt, y: art.y, shade: art.shade }); }
+st.prog = Array.from({ length: 7 }, () => ({ h: "", a: "" }));
+function normProg(p){ return Array.from({ length: 7 }, (_, i) => ({ h: String((p && p[i] && p[i].h) || ""), a: String((p && p[i] && p[i].a) || "") })); }
+
 function renderArtFmts(){
   const box = $("#artFmtChips"); box.innerHTML = "";
   ART_FMTS.forEach(f => {
     const b = document.createElement("button"); b.className = "chip"; b.setAttribute("aria-pressed", f === art.fmt);
     const w = f.w > f.h ? 40 : Math.round(40 * f.w / f.h), h = f.w > f.h ? Math.round(40 * f.h / f.w) : 40;
     b.innerHTML = '<svg width="40" height="40" aria-hidden="true"><rect x="' + (40 - w) / 2 + '" y="' + (40 - h) / 2 + '" width="' + w + '" height="' + h + '" rx="3" fill="currentColor" opacity=".55"/></svg>' + f.name;
-    b.addEventListener("click", () => { art.fmt = f; art.zoom = 1; art.ox = 0; art.oy = 0; $("#artFmtNote").textContent = ""; renderArtFmts(); drawArt(); });
+    b.addEventListener("click", () => { art.fmt = f; art.zoom = 1; art.ox = 0; art.oy = 0; saveArtPref(); renderArtFmts(); drawArt(); });
     box.appendChild(b);
   });
 }
-function bestFmt(w, h){
-  const r = Math.log(w / h);
-  return ART_FMTS.reduce((b, f) => Math.abs(Math.log(f.w / f.h) - r) < Math.abs(Math.log(b.w / b.h) - r) ? f : b);
+function renderArtChips(){
+  chipGroup($("#churchMode"), [["misturar", "Misturada"], ["suave", "Suave"], ["nao", "Sem igreja"]], () => art.church, v => { art.church = v; saveArtPref(); }, drawArt);
+  chipGroup($("#txtCase"), [[true, "MAIÚSCULAS"], [false, "Como digitado"]], () => art.upper, v => { art.upper = v; saveArtPref(); }, drawArt);
+  const set = (id, v, f) => { $("#" + id).value = v; $("#" + id + "V").textContent = f(v); };
+  set("chOp", art.chOp, v => v + "%"); set("chH", art.chH, v => v + "%"); set("txtSize", art.txt, v => v);
+  set("addrSize", art.addrTxt, v => v); set("txtY", art.y, v => v + "%"); set("shadeOp", art.shade, v => v + "%");
 }
-function renderBandChips(){
-  chipGroup($("#bandPos"), [["bottom", "Faixa embaixo"], ["top", "Faixa em cima"]], () => art.pos, v => { art.pos = v; }, drawArt);
-  chipGroup($("#bandBg"), [["igreja", "Foto da igreja"], ["escuro", "Escuro"], ["claro", "Claro"]], () => art.bgMode, v => { art.bgMode = v; }, drawArt);
+function renderDays(){
+  const box = $("#dayChips"); box.innerHTML = ""; const today = new Date().getDay();
+  DIAS_CURTOS.forEach((d, i) => {
+    const b = document.createElement("button"); b.textContent = d; b.setAttribute("aria-pressed", i === art.day);
+    if (i === today) b.className = "today";
+    b.addEventListener("click", () => applyDay(i, true));
+    box.appendChild(b);
+  });
 }
+function applyDay(i, force){
+  art.day = i; renderDays();
+  const p = st.prog[i] || { h: "", a: "" };
+  const hEl = $("#artHours"), aEl = $("#artAddr");
+  if (force || !hEl.dataset.touched) { hEl.value = p.h; delete hEl.dataset.touched; }
+  if (force || !aEl.dataset.touched) { aEl.value = p.a; delete aEl.dataset.touched; }
+  drawArt();
+}
+function renderProg(){
+  const box = $("#progRows"); if (!box) return; box.innerHTML = "";
+  st.prog.forEach((p, i) => {
+    const r = document.createElement("div"); r.className = "prow";
+    r.innerHTML = '<b></b><input data-k="h" placeholder="Ex.: Especialmente às 19h30"><input data-k="a" list="addrOpts" placeholder="Endereço">';
+    r.querySelector("b").textContent = DIAS_CURTOS[i];
+    r.querySelectorAll("input").forEach(inp => { inp.value = p[inp.dataset.k]; inp.addEventListener("input", () => { p[inp.dataset.k] = inp.value; if (i === art.day) applyDay(i, true); }); });
+    box.appendChild(r);
+  });
+  if (!$("#addrOpts")){ const dl = document.createElement("datalist"); dl.id = "addrOpts"; document.body.appendChild(dl); }
+}
+$("#progSameAddr").addEventListener("click", () => {
+  const first = st.prog.find(p => p.a.trim()); if (!first) return toast("Escreva o endereço em pelo menos um dia");
+  st.prog.forEach(p => { if (!p.a.trim()) p.a = first.a; }); renderProg(); applyDay(art.day, true); toast("Endereço copiado para os dias vazios");
+});
+$("#progSave").addEventListener("click", async () => {
+  if (!SB || !st.me) return toast("Entre na sua conta primeiro");
+  const btn = $("#progSave"); btn.disabled = true;
+  try{
+    const old = (st.progRows || []).slice();
+    const r = await SB.from("horarios").insert({ name: PROG_KEY, text: JSON.stringify(st.prog) }).select("id");
+    if (r.error) throw r.error;
+    for (const o of old){ await SB.from("horarios").delete().eq("id", o.id); }
+    toast("Programação salva para toda a equipe");
+    await loadSaved();
+  }catch(e){ toast("Não deu para salvar" + errHint(e), 3600); }
+  finally{ btn.disabled = false; }
+});
 $("#artIn").addEventListener("change", async e => {
   const f = e.target.files[0]; e.target.value = ""; if (!f) return;
-  try{
-    art.img = await fileToWork(f);
-    art.fmt = bestFmt(art.img.width, art.img.height); art.zoom = 1; art.ox = 0; art.oy = 0;
-    $("#artFmtNote").textContent = "Proporção ajustada para " + art.fmt.name + " pelo tamanho da arte. Pode trocar se quiser.";
-    renderArtFmts(); drawArt();
-  }catch(err){ toast("Não deu para abrir a arte"); }
+  try{ art.img = await fileToWork(f); art.zoom = 1; art.ox = 0; art.oy = 0; drawArt(); sessSaveArt(); }
+  catch(err){ toast("Não deu para abrir a arte"); }
 });
 $("#artBgIn").addEventListener("change", async e => {
   const f = e.target.files[0]; e.target.value = ""; if (!f) return;
-  try{ art.bg = await fileToWork(f); art.bgToday = true; art.bgMode = "igreja"; renderBandChips(); applyCfg(); }catch(err){ toast("Não deu para abrir a foto"); }
+  try{ art.bg = await fileToWork(f); art.bgToday = true; if (art.church === "nao"){ art.church = "misturar"; renderArtChips(); } applyCfg(); }catch(err){ toast("Não deu para abrir a foto"); }
 });
-bindRange("bandOp", v => v + "%", v => { art.op = v; drawArt(); });
-bindRange("txtSize", v => v, v => { art.txt = v; drawArt(); });
+[["chOp", "chOp", "%"], ["chH", "chH", "%"], ["txtSize", "txt", ""], ["addrSize", "addrTxt", ""], ["txtY", "y", "%"], ["shadeOp", "shade", "%"]].forEach(([id, k, u]) =>
+  bindRange(id, v => v + u, v => { art[k] = v; saveArtPref(); drawArt(); }));
 $("#artZoom").addEventListener("input", e => { art.zoom = +e.target.value; drawArt(); });
 ["artAddr", "artHours"].forEach(id => $("#" + id).addEventListener("input", e => { e.target.dataset.touched = 1; drawArt(); }));
 attachPanZoom($("#artPv"), () => art.img ? { cell: { x: 0, y: 0, w: art.fmt.w, h: art.fmt.h }, slot: art, img: art.img } : null, () => drawArt());
@@ -1529,6 +1695,28 @@ function wrapLines(ctx, text, maxW){
   });
   return out;
 }
+let fadeCv = null;
+function drawChurch(ctx, W, H){
+  if (art.church === "nao" || !art.bg || !art.chOp) return;
+  const h = Math.round(H * art.chH / 100);
+  if (!fadeCv) fadeCv = document.createElement("canvas");
+  fadeCv.width = W; fadeCv.height = h;
+  const f = fadeCv.getContext("2d"); f.clearRect(0, 0, W, h);
+  const b = art.bg, sc = Math.max(W / b.width, h / b.height);
+  f.globalCompositeOperation = "source-over";
+  if (art.church === "misturar") f.filter = "grayscale(.35) contrast(1.05)";
+  f.drawImage(b, (W - b.width * sc) / 2, (h - b.height * sc) / 2, b.width * sc, b.height * sc);
+  f.filter = "none";
+  const g = f.createLinearGradient(0, 0, 0, h);
+  g.addColorStop(0, "rgba(0,0,0,1)"); g.addColorStop(.55, "rgba(0,0,0,.7)"); g.addColorStop(1, "rgba(0,0,0,0)");
+  f.globalCompositeOperation = "destination-in"; f.fillStyle = g; f.fillRect(0, 0, W, h);
+  f.globalCompositeOperation = "source-over";
+  ctx.save();
+  ctx.globalAlpha = art.chOp / 100;
+  ctx.globalCompositeOperation = art.church === "misturar" ? "luminosity" : "source-over";
+  ctx.drawImage(fadeCv, 0, 0);
+  ctx.restore();
+}
 function renderArt(ctx){
   const W = art.fmt.w, H = art.fmt.h, k = Math.min(W, H) / 1080;
   ctx.fillStyle = "#121214"; ctx.fillRect(0, 0, W, H);
@@ -1537,52 +1725,47 @@ function renderArt(ctx){
     ctx.fillStyle = "rgba(255,255,255,.45)"; ctx.font = "700 " + Math.round(44 * k) + "px Archivo, sans-serif";
     ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.fillText("Escolha a arte recebida", W / 2, H * .42);
   }
-  const addr = $("#artAddr").value.trim(), hours = $("#artHours").value.trim();
-  if (!addr && !hours) return;
-  const ts = art.txt * k, lh = ts * 1.32, pad = ts * 1.1, maxW = W - pad * 2;
-  ctx.font = "700 " + ts + "px Archivo, sans-serif";
-  const aL = addr ? wrapLines(ctx, addr, maxW - ts * 1.2) : [];
-  const hs = Math.round(ts * .9);
-  ctx.font = "500 " + hs + "px Archivo, sans-serif";
-  const hL = hours ? wrapLines(ctx, hours, maxW) : [];
-  const gap = aL.length && hL.length ? lh * .35 : 0;
-  const bandH = pad * 1.5 + (aL.length + hL.length) * lh + gap;
-  const y0 = art.pos === "top" ? 0 : H - bandH;
-  const light = art.bgMode === "claro";
-  ctx.save(); ctx.beginPath(); ctx.rect(0, y0, W, bandH); ctx.clip();
-  if (art.bgMode === "igreja" && art.bg){
-    const b = art.bg, sc = Math.max(W / b.width, bandH / b.height) * 1.12;
-    ctx.filter = "blur(" + Math.max(2, Math.round(5 * k)) + "px)";
-    ctx.drawImage(b, (W - b.width * sc) / 2, y0 + (bandH - b.height * sc) / 2, b.width * sc, b.height * sc);
-    ctx.filter = "none";
-    ctx.fillStyle = "rgba(0,0,0," + (.25 + art.op / 100 * .6) + ")"; ctx.fillRect(0, y0, W, bandH);
-  } else {
-    ctx.fillStyle = light ? "rgba(255,255,255," + art.op / 100 + ")" : "rgba(14,14,16," + art.op / 100 + ")";
-    ctx.fillRect(0, y0, W, bandH);
+  drawChurch(ctx, W, H);
+  let hl = $("#artHours").value.trim(), ad = $("#artAddr").value.trim();
+  if (art.upper){ hl = hl.toLocaleUpperCase("pt-BR"); ad = ad.toLocaleUpperCase("pt-BR"); }
+  if (!hl && !ad) return;
+  const maxW = W * .92;
+  const fit = (txt, size, wgt) => {
+    if (!txt) return { size, lines: [] };
+    let sz = size; ctx.font = wgt + " " + sz + "px Oswald, 'Arial Narrow', sans-serif";
+    const longest = () => Math.max(...txt.split("\n").map(l => ctx.measureText(l).width));
+    const w = longest();
+    if (w > maxW){ sz = Math.max(size * .62, size * maxW / w); ctx.font = wgt + " " + sz + "px Oswald, 'Arial Narrow', sans-serif"; }
+    return { size: sz, lines: wrapLines(ctx, txt, maxW) };
+  };
+  const H1 = fit(hl, art.txt * k, "600"), A1 = fit(ad, art.addrTxt * k, "500");
+  const hs = H1.size, as = A1.size, hL = H1.lines, aL = A1.lines;
+  const gap = hL.length && aL.length ? as * .55 : 0;
+  const blockH = hL.length * hs * 1.12 + gap + aL.length * as * 1.2;
+  const bottom = H - H * art.y / 100;
+  const top = bottom - blockH;
+  if (art.shade){
+    const st0 = Math.max(0, top - H * .18);
+    const g = ctx.createLinearGradient(0, st0, 0, H);
+    g.addColorStop(0, "rgba(0,0,0,0)"); g.addColorStop(1, "rgba(0,0,0," + (art.shade / 100 * .85) + ")");
+    ctx.fillStyle = g; ctx.fillRect(0, st0, W, H - st0);
   }
-  ctx.restore();
-  const ink = light ? "#141414" : "#ffffff";
-  let y = y0 + pad * .75;
-  ctx.textAlign = "center"; ctx.textBaseline = "top";
-  ctx.font = "700 " + ts + "px Archivo, sans-serif"; ctx.fillStyle = ink;
-  aL.forEach((l, i) => {
-    const w = ctx.measureText(l).width, shift = i === 0 ? ts * .45 : 0;
-    if (i === 0){
-      const s = ts * .82, px = W / 2 - w / 2 + shift - s * .75, py = y + ts * .04;
-      ctx.save(); ctx.fillStyle = "#d4262e"; ctx.beginPath();
-      ctx.arc(px, py + s * .36, s * .36, Math.PI, 0); ctx.lineTo(px, py + s); ctx.closePath(); ctx.fill();
-      ctx.fillStyle = "#fff"; ctx.beginPath(); ctx.arc(px, py + s * .36, s * .13, 0, Math.PI * 2); ctx.fill(); ctx.restore();
-    }
-    ctx.fillStyle = ink; ctx.fillText(l, W / 2 + shift, y); y += lh;
-  });
+  ctx.save();
+  ctx.textAlign = "center"; ctx.textBaseline = "top"; ctx.fillStyle = "#ffffff";
+  ctx.shadowColor = "rgba(0,0,0,.65)"; ctx.shadowBlur = 18 * k; ctx.shadowOffsetY = 3 * k;
+  let y = top;
+  ctx.font = "600 " + hs + "px Oswald, 'Arial Narrow', sans-serif";
+  hL.forEach(l => { ctx.fillText(l, W / 2, y); y += hs * 1.12; });
   y += gap;
-  ctx.font = "500 " + hs + "px Archivo, sans-serif"; ctx.fillStyle = light ? "rgba(20,20,20,.85)" : "rgba(255,255,255,.9)";
-  hL.forEach(l => { ctx.fillText(l, W / 2, y); y += lh; });
+  ctx.font = "500 " + as + "px Oswald, 'Arial Narrow', sans-serif";
+  aL.forEach(l => { ctx.fillText(l, W / 2, y); y += as * 1.2; });
+  ctx.restore();
 }
 function drawArt(){
   const cv = $("#artPv"); if (!cv) return;
   if (cv.width !== art.fmt.w || cv.height !== art.fmt.h){ cv.width = art.fmt.w; cv.height = art.fmt.h; }
   renderArt(cv.getContext("2d"));
+  saveSession();
   $("#artZoom").value = art.zoom; $("#artZoomV").textContent = art.zoom.toFixed(1) + "×";
 }
 
@@ -1831,10 +2014,11 @@ $$(".seg button").forEach(b => b.addEventListener("click", () => {
 
 /* ---------- Init ---------- */
 buildSliders(); renderFormats(); renderLayoutChips(); renderTray(); renderLyEditor(); syncAdjUI(); syncTxUI();
-renderArtFmts(); renderBandChips(); renderDoneFilter(); renderDone(); renderPresets(); renderSaved();
+renderArtFmts(); renderArtChips(); renderProg(); applyDay(art.day, false); renderDoneFilter(); renderDone(); renderPresets(); renderSaved();
 setLogos([]); setLayouts([]); applyCfg();
 draw();
-if (document.fonts && document.fonts.load){ Promise.all([document.fonts.load("600 34px Archivo"), document.fonts.load("500 30px Archivo")]).then(() => { draw(); drawArt(); }).catch(() => {}); }
+restoreSession();
+if (document.fonts && document.fonts.load){ Promise.all([document.fonts.load("600 34px Archivo"), document.fonts.load("500 30px Archivo"), document.fonts.load("600 40px Oswald")]).then(() => { draw(); drawArt(); }).catch(() => {}); }
 
 /* ---------- Supabase e login ---------- */
 const CFG = window.DURAES_CONFIG || {};
