@@ -223,8 +223,8 @@ input[type=range]:disabled{opacity:.4}
   #v-mont .zbar{margin-top:6px;padding:4px}
   #v-mont .zb{width:36px;height:36px}
 }
-.layers{display:grid;grid-template-columns:repeat(4,1fr);gap:5px;margin-top:8px}
-.layers button{border:2px solid var(--line);background:var(--panel2);border-radius:12px;padding:8px 0;font-weight:800;font-size:13px;color:var(--muted);cursor:pointer}
+.layers{display:grid;grid-template-columns:repeat(5,1fr);gap:4px;margin-top:8px}
+.layers button{border:2px solid var(--line);background:var(--panel2);border-radius:12px;padding:8px 0;font-weight:800;font-size:12px;color:var(--muted);cursor:pointer}
 .layers button[aria-pressed="true"]{border-color:var(--accent);background:var(--accent);color:var(--accent-ink)}
 .layers button:disabled{opacity:.4}
 .erasebar{margin-top:8px;padding:6px 10px;border-radius:14px;background:var(--panel2)}
@@ -499,6 +499,11 @@ textarea.tin{min-height:72px;resize:vertical;margin-top:8px}
       <button class="btn small" id="chReset">Centralizar igreja</button>
     </div>
     <p class="muted" id="artBgNote"></p>
+
+    <h3>Logo</h3>
+    <div class="chips" id="artLogoChips"></div>
+    <div class="box" style="margin-top:8px"><label class="sl">Tamanho <input type="range" id="artLogoSize" min="3" max="80" step="0.5" value="11"><span class="v" id="artLogoSizeV">11%</span></label></div>
+    <button class="btn small" id="artLogoReset" style="margin-top:8px">Logo embaixo no centro</button>
 
     <h3>Texto</h3>
     <div class="chips" id="txtCase"></div>
@@ -1388,13 +1393,14 @@ function saveLogoPos(){
 }
 function setLogos(list){
   st.logos = list;
-  list.forEach(l => { if (!logoImgs.has(l.id)){ logoImgs.set(l.id, null); const im = new Image(); im.crossOrigin = "anonymous"; im.onload = () => { logoImgs.set(l.id, im); draw(); drawArt(); }; im.src = logoSrc(l); } });
+  list.forEach(l => { if (!logoImgs.has(l.id)){ logoImgs.set(l.id, null); const im = new Image(); im.crossOrigin = "anonymous"; im.onload = () => { logoImgs.set(l.id, im); draw(); drawArt(); if (typeof renderLayers === "function") renderLayers(); }; im.src = logoSrc(l); } });
   if (st.logoId && !list.find(l => l.id === st.logoId)) st.logoId = null;
   if (!st.logoId && !st._logoTouched){
     const def = list.find(l => l.id === st.cfg.defaultLogoId) || list[0];
     if (def){ st.logoId = def.id; applyLogoPos(); }
   }
   renderLogoChips(); renderLogoLib(); draw();
+  if (typeof renderArtLogoChips === "function"){ renderArtLogoChips(); renderLayers(); }
 }
 $("#logoChips").addEventListener("click", () => { st._logoTouched = true; });
 
@@ -1639,11 +1645,12 @@ const artPref = LS.get("artPref", {});
 const art = { img: null, bg: null, bgSrc: null, bgToday: false,
   fmt: ART_FMTS.find(f => f.id === artPref.fmt) || ART_FMTS[0], zoom: 1, ox: 0, oy: 0,
   church: artPref.church || "misturar", chOp: artPref.chOp ?? 35, chH: artPref.chH ?? 42,
-  ch: Object.assign({ zoom: 1, ox: 0, oy: 0 }, artPref.ch || {}),
+  cf: Object.assign({ z: 1, x: 0, y: 0 }, artPref.cf || {}),
+  logoId: artPref.logoId || null, lg: Object.assign({ s: 11, x: .5, y: 2 }, artPref.lg || {}),
   upper: artPref.upper ?? true, txt: artPref.txt ?? TX_DEF.txt, addrTxt: artPref.addrTxt ?? TX_DEF.addrTxt,
   y: artPref.y ?? TX_DEF.y, xOff: artPref.xOff ?? 0, shade: artPref.shade ?? 45,
   day: new Date().getDay(), extra: null, layer: "arte", mask: null, maskDirty: false, undo: [], brush: 50 };
-function saveArtPref(){ LS.set("artPref", { fmt: art.fmt.id, church: art.church, chOp: art.chOp, chH: art.chH, ch: art.ch, upper: art.upper, txt: art.txt, addrTxt: art.addrTxt, y: art.y, xOff: art.xOff, shade: art.shade }); }
+function saveArtPref(){ LS.set("artPref", { fmt: art.fmt.id, church: art.church, chOp: art.chOp, chH: art.chH, cf: art.cf, logoId: art.logoId, lg: art.lg, upper: art.upper, txt: art.txt, addrTxt: art.addrTxt, y: art.y, xOff: art.xOff, shade: art.shade }); }
 st.prog = { dias: Array.from({ length: 7 }, () => ({ h: "", a: "" })), extras: [] };
 function normProg(p){
   const dias = Array.isArray(p) ? p : (p && p.dias) || [];
@@ -1674,11 +1681,12 @@ function renderArtChips(){
   chipGroup($("#txtCase"), [[true, "MAIÚSCULAS"], [false, "Como digitado"]], () => art.upper, v => { art.upper = v; saveArtPref(); }, drawArt);
   syncArtSliders(); renderLayers();
 }
-const LAYERS = [["arte", "Arte"], ["igreja", "Igreja"], ["texto", "Texto"], ["apagar", "Apagar"]];
+const LAYERS = [["arte", "Arte"], ["igreja", "Igreja"], ["texto", "Texto"], ["logo", "Logo"], ["apagar", "Apagar"]];
 const LAYER_HINT = {
   arte: "Arraste para enquadrar. Dois dedos para zoom.",
   igreja: "Arraste a igreja. Dois dedos para zoom.",
   texto: "Arraste o texto. Dois dedos para aumentar ou diminuir.",
+  logo: "Arraste a logo. Dois dedos para aumentar ou diminuir.",
   apagar: "Pinte o que quer sumir. Melhor em coisas pequenas sobre fundo simples."
 };
 function renderLayers(){
@@ -1686,10 +1694,12 @@ function renderLayers(){
   LAYERS.forEach(([v, n]) => {
     const b = document.createElement("button"); b.textContent = n; b.setAttribute("aria-pressed", art.layer === v);
     if (v === "igreja" && (art.church === "nao" || !art.bg)) b.disabled = true;
+    if (v === "logo" && !artLogo()) b.disabled = true;
     b.addEventListener("click", () => { art.layer = v; renderLayers(); drawArt(); });
     box.appendChild(b);
   });
   if (art.layer === "igreja" && (art.church === "nao" || !art.bg)) art.layer = "arte";
+  if (art.layer === "logo" && !artLogo()) art.layer = "arte";
   $("#eraseBar").hidden = art.layer !== "apagar";
   $("#artHint").textContent = LAYER_HINT[art.layer];
 }
@@ -1795,7 +1805,9 @@ $("#artBgIn").addEventListener("change", async e => {
 [["chOp", "chOp", "%"], ["chH", "chH", "%"], ["txtSize", "txt", ""], ["addrSize", "addrTxt", ""], ["shadeOp", "shade", "%"]].forEach(([id, k, u]) =>
   bindRange(id, v => v + u, v => { art[k] = v; saveArtPref(); drawArt(); }));
 bindRange("brush", v => v, v => { art.brush = v; });
-$("#chReset").addEventListener("click", () => { art.ch = { zoom: 1, ox: 0, oy: 0 }; saveArtPref(); drawArt(); });
+bindRange("artLogoSize", v => v + "%", v => { art.lg.s = v; saveArtPref(); drawArt(); });
+$("#artLogoReset").addEventListener("click", () => { art.lg = { s: art.lg.s, x: .5, y: 2 }; saveArtPref(); drawArt(); });
+$("#chReset").addEventListener("click", () => { art.cf = { z: 1, x: 0, y: 0 }; saveArtPref(); drawArt(); });
 $("#txReset").addEventListener("click", () => { Object.assign(art, TX_DEF); saveArtPref(); syncArtSliders(); drawArt(); });
 ["artAddr", "artHours"].forEach(id => $("#" + id).addEventListener("input", e => { e.target.dataset.touched = 1; drawArt(); }));
 
@@ -1832,7 +1844,7 @@ function chBandH(){ return Math.round(art.fmt.h * art.chH / 100); }
     if (pts.size === 1){ g = { last: p, dist: 0 }; if (art.layer === "apagar"){ paint(p, p); drawArt(); } }
     else if (pts.size === 2 && g){
       const [a, b] = [...pts.values()]; g.dist = Math.hypot(a.x - b.x, a.y - b.y) || 1;
-      g.z0 = art.layer === "igreja" ? art.ch.zoom : art.layer === "texto" ? [art.txt, art.addrTxt] : art.zoom;
+      g.z0 = art.layer === "igreja" ? art.cf.z : art.layer === "logo" ? art.lg.s : art.layer === "texto" ? [art.txt, art.addrTxt] : art.zoom;
     }
   });
   cv.addEventListener("pointermove", e => {
@@ -1842,14 +1854,16 @@ function chBandH(){ return Math.round(art.fmt.h * art.chH / 100); }
       if (art.layer === "apagar") return;
       const [a, b] = [...pts.values()], r = Math.hypot(a.x - b.x, a.y - b.y) / g.dist;
       if (art.layer === "texto"){ art.txt = clamp(g.z0[0] * r, 20, 160); art.addrTxt = clamp(g.z0[1] * r, 14, 110); syncArtSliders(); }
-      else if (art.layer === "igreja") art.ch.zoom = clamp(g.z0 * r, 1, 4);
+      else if (art.layer === "igreja") art.cf.z = clamp(g.z0 * r, .3, 4);
+      else if (art.layer === "logo"){ art.lg.s = clamp(g.z0 * r, 3, 80); syncArtLogo(); }
       else art.zoom = clamp(g.z0 * r, 1, 4);
       drawArt(); return;
     }
     const dx = p.x - g.last.x, dy = p.y - g.last.y;
     if (art.layer === "apagar") paint(g.last, p);
     else if (art.layer === "texto"){ art.xOff = clamp(art.xOff + dx / art.fmt.w, -.45, .45); art.y = clamp(art.y - dy / art.fmt.h * 100, -10, 92); }
-    else if (art.layer === "igreja" && art.bg) pan(art.ch, { w: art.fmt.w, h: chBandH() }, art.bg, dx, dy);
+    else if (art.layer === "igreja" && art.bg){ art.cf.x = clamp(art.cf.x + dx / art.fmt.w, -1, 1); art.cf.y = clamp(art.cf.y + dy / chBandH(), -1, 1); }
+    else if (art.layer === "logo"){ art.lg.x = clamp(art.lg.x + dx / art.fmt.w, 0, 1); art.lg.y = clamp(art.lg.y - dy / art.fmt.h * 100, -5, 95); }
     else if (art.img) pan(art, { w: art.fmt.w, h: art.fmt.h }, art.img, dx, dy);
     g.last = p; drawArt();
   });
@@ -1862,7 +1876,8 @@ function chBandH(){ return Math.round(art.fmt.h * art.chH / 100); }
   cv.addEventListener("wheel", e => {
     e.preventDefault(); const f = e.deltaY < 0 ? 1.06 : 1 / 1.06;
     if (art.layer === "texto"){ art.txt = clamp(art.txt * f, 20, 160); art.addrTxt = clamp(art.addrTxt * f, 14, 110); syncArtSliders(); saveArtPref(); }
-    else if (art.layer === "igreja"){ art.ch.zoom = clamp(art.ch.zoom * f, 1, 4); saveArtPref(); }
+    else if (art.layer === "igreja"){ art.cf.z = clamp(art.cf.z * f, .3, 4); saveArtPref(); }
+    else if (art.layer === "logo"){ art.lg.s = clamp(art.lg.s * f, 3, 80); syncArtLogo(); saveArtPref(); }
     else if (art.layer === "arte") art.zoom = clamp(art.zoom * f, 1, 4);
     drawArt();
   }, { passive: false });
@@ -1957,16 +1972,25 @@ function wrapLines(ctx, text, maxW){
   });
   return out;
 }
-let fadeCv = null;
+let fadeCv = null, edgeCv = null;
 function drawChurch(ctx, W, H){
   if (art.church === "nao" || !art.bg || !art.chOp) return;
   const h = chBandH();
   if (!fadeCv) fadeCv = document.createElement("canvas");
   fadeCv.width = W; fadeCv.height = h;
   const f = fadeCv.getContext("2d"); f.clearRect(0, 0, W, h);
-  if (art.church === "misturar") f.filter = "grayscale(.35) contrast(1.05)";
-  drawCover(f, art.bg, { x: 0, y: 0, w: W, h }, art.ch);
-  f.filter = "none";
+  const b = art.bg, base = Math.max(W / b.width, h / b.height), dw = b.width * base * art.cf.z, dh = b.height * base * art.cf.z;
+  const dx = W / 2 + art.cf.x * W - dw / 2, dy = h / 2 + art.cf.y * h - dh / 2;
+  if (!edgeCv) edgeCv = document.createElement("canvas");
+  edgeCv.width = Math.max(1, Math.round(dw)); edgeCv.height = Math.max(1, Math.round(dh));
+  const e = edgeCv.getContext("2d");
+  if (art.church === "misturar") e.filter = "grayscale(.35) contrast(1.05)";
+  e.drawImage(b, 0, 0, edgeCv.width, edgeCv.height); e.filter = "none";
+  const fx = Math.min(edgeCv.width * .14, W * .1), eg = e.createLinearGradient(0, 0, edgeCv.width, 0), q = fx / edgeCv.width;
+  eg.addColorStop(0, "rgba(0,0,0,0)"); eg.addColorStop(q, "rgba(0,0,0,1)"); eg.addColorStop(1 - q, "rgba(0,0,0,1)"); eg.addColorStop(1, "rgba(0,0,0,0)");
+  const coversX = dx <= 0 && dx + dw >= W;
+  if (!coversX){ e.globalCompositeOperation = "destination-in"; e.fillStyle = eg; e.fillRect(0, 0, edgeCv.width, edgeCv.height); e.globalCompositeOperation = "source-over"; }
+  f.drawImage(edgeCv, dx, dy, dw, dh);
   const g = f.createLinearGradient(0, 0, 0, h);
   g.addColorStop(0, "rgba(0,0,0,1)"); g.addColorStop(.55, "rgba(0,0,0,.7)"); g.addColorStop(1, "rgba(0,0,0,0)");
   f.globalCompositeOperation = "destination-in"; f.fillStyle = g; f.fillRect(0, 0, W, h);
@@ -1998,7 +2022,7 @@ function renderArt(ctx, preview){
   }
   let hl = $("#artHours").value.trim(), ad = $("#artAddr").value.trim();
   if (art.upper){ hl = hl.toLocaleUpperCase("pt-BR"); ad = ad.toLocaleUpperCase("pt-BR"); }
-  if (!hl && !ad) return;
+  if (!hl && !ad){ drawArtLogo(ctx, W, H, preview); return; }
   const maxW = W * .92;
   const fit = (txt, size, wgt) => {
     if (!txt) return { size, lines: [] };
@@ -2011,7 +2035,14 @@ function renderArt(ctx, preview){
   const hs = H1.size, as = A1.size, hL = H1.lines, aL = A1.lines;
   const gap = hL.length && aL.length ? as * .55 : 0;
   const blockH = hL.length * hs * 1.12 + gap + aL.length * as * 1.2;
-  const bottom = H - H * art.y / 100, top = bottom - blockH, cx = W / 2 + art.xOff * W;
+  let bottom = H - H * art.y / 100;
+  const lim = artLogo();
+  if (lim){
+    const lw = W * art.lg.s / 100, lh = lw * (lim.naturalHeight || lim.height) / (lim.naturalWidth || lim.width);
+    const lTop = H - H * art.lg.y / 100 - lh, lBot = lTop + lh;
+    if (lBot > bottom - blockH && lTop < bottom) bottom = lTop - 14 * k;
+  }
+  const top = bottom - blockH, cx = W / 2 + art.xOff * W;
   if (art.shade){
     const st0 = Math.max(0, top - H * .18);
     const g = ctx.createLinearGradient(0, st0, 0, H);
@@ -2028,10 +2059,39 @@ function renderArt(ctx, preview){
   ctx.font = "500 " + as + "px Oswald, 'Arial Narrow', sans-serif";
   aL.forEach(l => { ctx.fillText(l, cx, y); y += as * 1.2; });
   ctx.restore();
+  drawArtLogo(ctx, W, H, preview);
   if (preview && art.layer === "texto"){
     ctx.save(); ctx.setLineDash([14 * k, 10 * k]); ctx.strokeStyle = "rgba(255,255,255,.85)"; ctx.lineWidth = 3 * k;
     ctx.strokeRect(W * .03, top - 12 * k, W * .94, blockH + 24 * k); ctx.restore();
   }
+}
+function artLogo(){ const im = art.logoId && logoImgs.get(art.logoId); return im && (im.naturalWidth || im.width) ? im : null; }
+function drawArtLogo(ctx, W, H, preview){
+  const im = artLogo(); if (!im) return;
+  const iw = im.naturalWidth || im.width, ih = im.naturalHeight || im.height;
+  const lw = W * art.lg.s / 100, lh = lw * ih / iw, x = art.lg.x * W - lw / 2, y = H - H * art.lg.y / 100 - lh;
+  ctx.drawImage(im, x, y, lw, lh);
+  if (preview && art.layer === "logo"){
+    const k = Math.min(W, H) / 1080;
+    ctx.save(); ctx.setLineDash([14 * k, 10 * k]); ctx.strokeStyle = "rgba(255,255,255,.85)"; ctx.lineWidth = 3 * k;
+    ctx.strokeRect(x - 6 * k, y - 6 * k, lw + 12 * k, lh + 12 * k); ctx.restore();
+  }
+}
+function syncArtLogo(){ const el = $("#artLogoSize"); if (el){ el.value = Math.round(art.lg.s); $("#artLogoSizeV").textContent = Math.round(art.lg.s) + "%"; } }
+function renderArtLogoChips(){
+  const box = $("#artLogoChips"); if (!box) return; box.innerHTML = "";
+  if (art.logoId && st.logos.length && !st.logos.find(l => l.id === art.logoId)) art.logoId = null;
+  const none = document.createElement("button"); none.className = "chip"; none.setAttribute("aria-pressed", !art.logoId);
+  none.innerHTML = '<svg width="44" height="44" aria-hidden="true"><circle cx="22" cy="22" r="16" fill="none" stroke="currentColor" stroke-width="2"/><path d="M11 33L33 11" stroke="currentColor" stroke-width="2"/></svg>Sem logo';
+  none.addEventListener("click", () => { art.logoId = null; saveArtPref(); renderArtLogoChips(); renderLayers(); drawArt(); });
+  box.appendChild(none);
+  st.logos.forEach(l => {
+    const b = document.createElement("button"); b.className = "chip"; b.setAttribute("aria-pressed", art.logoId === l.id);
+    b.innerHTML = '<img alt=""><span></span>'; b.querySelector("img").src = logoSrc(l); b.querySelector("span").textContent = l.name;
+    b.addEventListener("click", () => { art.logoId = l.id; art.layer = "logo"; saveArtPref(); renderArtLogoChips(); renderLayers(); drawArt(); });
+    box.appendChild(b);
+  });
+  syncArtLogo();
 }
 function drawArt(){
   const cv = $("#artPv"); if (!cv) return;
@@ -2285,7 +2345,7 @@ $$(".seg button").forEach(b => b.addEventListener("click", () => {
 
 /* ---------- Init ---------- */
 buildSliders(); renderFormats(); renderLayoutChips(); renderTray(); renderLyEditor(); syncAdjUI(); syncTxUI();
-renderArtFmts(); renderArtChips(); renderProg(); applyDay(art.day, false); renderDoneFilter(); renderDone(); renderPresets(); renderSaved();
+renderArtFmts(); renderArtChips(); renderArtLogoChips(); renderProg(); applyDay(art.day, false); renderDoneFilter(); renderDone(); renderPresets(); renderSaved();
 setLogos([]); setLayouts([]); applyCfg();
 draw();
 restoreSession();
