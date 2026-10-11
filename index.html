@@ -351,6 +351,23 @@ nav.top button{font-size:10.5px}
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .fcard.late{background:#2e1715;border-color:#6b2b26}:root:not([data-theme="light"]) .fx-late{background:#3a1a18;color:#ffb4ab}}
 :root[data-theme="dark"] .fcard.late{background:#2e1715;border-color:#6b2b26}
 :root[data-theme="dark"] .fx-late{background:#3a1a18;color:#ffb4ab}
+.card .ck{border:2px solid #fff;cursor:pointer;pointer-events:auto;width:32px;height:32px;top:6px;left:6px;z-index:2;padding:0}
+.card img{cursor:zoom-in}
+.card .zoomhint{position:absolute;top:8px;right:8px;width:26px;height:26px;border-radius:8px;background:rgba(0,0,0,.45);color:#fff;display:grid;place-items:center;font-size:14px;pointer-events:none}
+.card .bar button[data-a="e"]{background:var(--accent);color:#fff}
+.viewer{position:fixed;inset:0;z-index:45;background:#0b0b0d;display:none;flex-direction:column;padding:calc(10px + env(safe-area-inset-top,0px)) 10px calc(14px + env(safe-area-inset-bottom,0px));color:#fff}
+.viewer.on{display:flex;animation:rise .2s ease}
+.vtop{display:flex;justify-content:space-between;align-items:center;font-weight:800;font-size:14px;padding:0 4px 8px}
+.vbtn{width:40px;height:40px;border-radius:50%;border:0;background:rgba(255,255,255,.14);color:#fff;font-size:18px;cursor:pointer}
+.vstage{flex:1;min-height:0;display:flex;align-items:center;justify-content:center;gap:6px;position:relative}
+.vstage img{max-width:100%;max-height:100%;object-fit:contain;border-radius:8px;box-shadow:0 10px 40px rgba(0,0,0,.5);flex:1;min-width:0}
+.vnav{position:absolute;top:50%;transform:translateY(-50%);width:44px;height:64px;border:0;border-radius:14px;background:rgba(255,255,255,.12);color:#fff;font-size:30px;cursor:pointer;z-index:1}
+.vnav:disabled{opacity:.15}
+#vPrev{left:0}#vNext{right:0}
+.vinfo{text-align:center;color:#c9c5bf;font-size:13px;font-weight:600;margin:10px 0}
+.vact{display:flex;gap:8px;justify-content:center}
+.vact .btn{flex:1;max-width:160px}
+.viewer .btn:not(.primary){background:rgba(255,255,255,.12);color:#fff;border-color:transparent}
 </style>
 </head>
 <body>
@@ -620,7 +637,7 @@ nav.top button{font-size:10.5px}
 <section class="view" id="v-done">
   <div class="panel">
     <div class="ptitle"><span class="ic"><svg class="i"><use href="#i-stack"/></svg></span><h2>Prontas para postar</h2></div>
-    <p class="lead">Ficam salvas na nuvem para toda a equipe. Toque nas imagens para marcar.</p>
+    <p class="lead">Ficam salvas na nuvem para toda a equipe. Toque na imagem para ver grande e no círculo para marcar.</p>
     <div class="chips small" id="doneFilter"></div>
     <div class="toolbar">
       <span class="count" id="selInfo"></span>
@@ -786,6 +803,12 @@ nav.top button{font-size:10.5px}
   <div class="row" style="justify-content:flex-end;margin-top:8px"><button class="btn" id="fnCancel">Cancelar</button><button class="btn primary" id="fnSave">Criar</button></div>
 </div></div>
 <div class="flink" id="fLink" hidden><span id="fLinkTxt"></span><button id="fLinkX" aria-label="Cancelar ligação">✕</button></div>
+<div class="viewer" id="viewer" role="dialog" aria-label="Ver grande">
+  <div class="vtop"><span id="vCount"></span><button class="vbtn" id="vClose" aria-label="Fechar">✕</button></div>
+  <div class="vstage"><button class="vnav" id="vPrev" aria-label="Anterior">‹</button><img id="vImg" alt=""><button class="vnav" id="vNext" aria-label="Próxima">›</button></div>
+  <p class="vinfo" id="vInfo"></p>
+  <div class="vact"><button class="btn" id="vMark">Marcar</button><button class="btn" id="vShare">Enviar</button><button class="btn primary" id="vEdit">Editar</button></div>
+</div>
 <div class="toast" id="toast" role="status"></div>
 <div class="modal" id="modal"><div class="box2"><p style="margin:0 0 10px;font-weight:700">Toque e segure a imagem para salvar</p><img id="modalImg" alt="Imagem pronta"><div class="row" style="margin-top:12px"><button class="btn wide" id="modalClose">Fechar</button></div></div></div>
 
@@ -2336,15 +2359,19 @@ function canShareFiles(){
 
 /* ---------- Prontas (na nuvem) ---------- */
 const PB = "prontas";
-const done = { items: [], editing: null, snaps: new Map(), range: "hoje", mine: false };
+const done = { items: [], editing: null, snaps: new Map(Object.entries(LS.get("snaps", {}) || {})), range: "hoje", mine: false };
 function snapshot(){
   return { fmtId: st.fmt.id, layoutId: st.layoutId, gap: st.gap, logoId: st.logoId, logoSize: st.logoSize, logoBottom: st.logoBottom,
-    slots: st.slots.map(s => Object.assign({}, s)), tx: Object.assign({}, st.tx) };
+    slots: st.slots.map(s => { const ph = s.photoId && st.photos.find(p => p.id === s.photoId); return Object.assign({}, s, ph ? { adj: JSON.parse(JSON.stringify(ph.adj)) } : {}); }), tx: Object.assign({}, st.tx) };
 }
 function restore(sn){
   st.fmt = FORMATS.find(f => f.id === sn.fmtId) || FORMATS[0];
   st.layoutId = sn.layoutId; st.gap = sn.gap; st.logoId = sn.logoId; st.logoSize = sn.logoSize; st.logoBottom = sn.logoBottom; st._logoTouched = true;
-  st.slots = sn.slots.map(s => Object.assign({}, s, { photoId: st.photos.find(p => p.id === s.photoId) ? s.photoId : null }));
+  st.slots = sn.slots.map(s => {
+    const ph = st.photos.find(p => p.id === s.photoId);
+    if (ph && s.adj) ph.adj = Object.assign(defaultAdj(), JSON.parse(JSON.stringify(s.adj)));
+    const o = Object.assign({}, s, { photoId: ph ? s.photoId : null }); delete o.adj; return o;
+  });
   if (sn.tx) st.tx = Object.assign({}, sn.tx);
   st.sel = 0;
   $("#gap").value = st.gap; $("#gapV").textContent = st.gap;
@@ -2411,30 +2438,104 @@ function renderDone(){
     const prev = done.items[i - 1], next = done.items[i + 1];
     const canPrev = prev && dayKey(prev.created_at) === dk, canNext = next && dayKey(next.created_at) === dk;
     const c = document.createElement("div"); c.className = "card" + (it.on ? " on" : "");
-    c.innerHTML = '<img alt="" loading="lazy"><span class="ck">' + (it.on ? "✓" : "") + '</span><div class="bar"><span class="num"><span class="n"></span><span class="by"></span></span>' +
+    c.innerHTML = '<img alt="" loading="lazy"><button class="ck" aria-label="Marcar">' + (it.on ? "✓" : "") + '</button><span class="zoomhint" aria-hidden="true">⤢</span><div class="bar"><span class="num"><span class="n"></span><span class="by"></span></span>' +
       '<button data-a="l" aria-label="Mover para antes">◀</button><button data-a="r" aria-label="Mover para depois">▶</button>' +
-      (done.snaps.has(it.id) ? '<button data-a="e">Editar</button>' : "") + "</div>";
+      '<button data-a="e" aria-label="Editar">✎</button>' + "</div>";
     if (it.url) c.querySelector("img").src = it.url;
     c.querySelector(".n").textContent = String(n).padStart(2, "0") + (it.kind === "art" ? " arte" : "");
     c.querySelector(".by").textContent = it.author || "";
-    c.querySelector("img").addEventListener("click", () => { it.on = !it.on; if (it.on) getBlob(it).catch(() => {}); renderDone(); });
+    c.querySelector(".ck").addEventListener("click", () => { it.on = !it.on; if (it.on) getBlob(it).catch(() => {}); renderDone(); });
+    c.querySelector("img").addEventListener("click", () => openViewer(i));
     const l = c.querySelector('[data-a="l"]'), rgt = c.querySelector('[data-a="r"]');
     l.disabled = !canPrev; rgt.disabled = !canNext;
     l.addEventListener("click", () => canPrev && swapOrd(it, prev));
     rgt.addEventListener("click", () => canNext && swapOrd(it, next));
-    const e = c.querySelector('[data-a="e"]');
-    if (e) e.addEventListener("click", () => {
-      const sn = done.snaps.get(it.id);
-      if (sn.slots.some(s => s.photoId && !st.photos.find(p => p.id === s.photoId))){ toast("As fotos dessa montagem não estão mais abertas.", 3600); return; }
-      done.editing = it.id; restore(sn); updateAddBtn();
-      $('nav.top [data-view="mont"]').click(); toast("Editando. Toque em Atualizar na lista quando terminar.", 3600);
-    });
+    c.querySelector('[data-a="e"]').addEventListener("click", () => editItem(it));
     g.appendChild(c);
   });
   const m = done.items.filter(i => i.on).length;
   $("#selInfo").textContent = done.items.length ? m + " de " + done.items.length + " marcada(s)" : "";
   updateAddBtn();
 }
+/* ---------- Ver grande e editar qualquer pronta ---------- */
+function saveSnaps(){
+  const o = {}; [...done.snaps.entries()].slice(-200).forEach(([k, v]) => { o[k] = v; });
+  LS.set("snaps", o);
+}
+function setSnap(id, sn){ done.snaps.delete(id); done.snaps.set(id, sn); saveSnaps(); }
+function closestFmt(w, h){
+  const r = Math.log(w / h);
+  return FORMATS.reduce((b, f) => Math.abs(Math.log(f.w / f.h) - r) < Math.abs(Math.log(b.w / b.h) - r) ? f : b);
+}
+async function editItem(it){
+  if (it.created_by && st.me && it.created_by !== st.me.id && !st.isAdmin) return toast("Só quem fez ou o administrador pode editar esta", 3400);
+  closeViewer();
+  const sn = done.snaps.get(it.id);
+  if (sn && sn.slots.some(s => s.photoId) && sn.slots.every(s => !s.photoId || st.photos.find(p => p.id === s.photoId))){
+    done.editing = it.id; restore(sn); updateAddBtn();
+    $('nav.top [data-view="mont"]').click(); toast("Editando com as fotos originais. Toque em Atualizar na lista quando terminar.", 3800);
+    return;
+  }
+  toast("Abrindo para editar…");
+  try{
+    const blob = await getBlob(it);
+    const img = await decodeBlob(blob);
+    const c = document.createElement("canvas"); c.width = img.naturalWidth || img.width; c.height = img.naturalHeight || img.height;
+    c.getContext("2d").drawImage(img, 0, 0);
+    const tc = document.createElement("canvas"), ts = 240 / Math.max(c.width, c.height);
+    tc.width = Math.round(c.width * ts); tc.height = Math.round(c.height * ts); tc.getContext("2d").drawImage(c, 0, 0, tc.width, tc.height);
+    const ph = { id: uid(), name: "pronta-" + String(it.id).slice(0, 6), work: c, thumb: tc.toDataURL("image/jpeg", .8), adj: defaultAdj(), proc: null, procKey: "", taken: 0 };
+    st.photos.push(ph); sessSavePhoto(ph, Date.now());
+    st.fmt = closestFmt(c.width, c.height); st.layoutId = "b1"; st.gap = 0;
+    st.logoId = null; st._logoTouched = true; st.tx = Object.assign(st.tx, { text: "" });
+    syncSlots(); st.slots.forEach((s, i) => { s.photoId = i === 0 ? ph.id : null; s.zoom = 1; s.ox = 0; s.oy = 0; }); st.sel = 0;
+    done.editing = it.id;
+    renderFormats(); renderLayoutChips(); renderLogoChips(); syncTxUI(); renderTray(); draw(); syncAdjUI(); updateAddBtn();
+    $('nav.top [data-view="mont"]').click();
+    toast("Editando a imagem pronta: ajuste luz, cor, corte ou texto e toque em Atualizar na lista.", 4500);
+  }catch(e){ toast("Não deu para abrir esta imagem" + errHint(e), 3600); }
+}
+const viewer = { i: 0 };
+function openViewer(i){
+  viewer.i = i; $("#viewer").classList.add("on"); document.body.style.overflow = "hidden"; renderViewer();
+}
+function closeViewer(){ $("#viewer").classList.remove("on"); document.body.style.overflow = ""; }
+function renderViewer(){
+  const it = done.items[viewer.i]; if (!it) return closeViewer();
+  const im = $("#vImg"); im.src = it.url || ""; im.alt = "Prévia";
+  $("#vCount").textContent = (viewer.i + 1) + " de " + done.items.length;
+  $("#vInfo").textContent = [it.kind === "art" ? "Arte" : "Montagem", it.author, dayLabel(it.created_at)].filter(Boolean).join(" • ");
+  $("#vPrev").disabled = viewer.i <= 0; $("#vNext").disabled = viewer.i >= done.items.length - 1;
+  const mk = $("#vMark"); mk.textContent = it.on ? "✓ Marcada" : "Marcar"; mk.classList.toggle("primary", !!it.on);
+}
+function stepViewer(d){ const n = viewer.i + d; if (n >= 0 && n < done.items.length){ viewer.i = n; renderViewer(); } }
+$("#vClose").addEventListener("click", closeViewer);
+$("#vPrev").addEventListener("click", () => stepViewer(-1));
+$("#vNext").addEventListener("click", () => stepViewer(1));
+$("#vEdit").addEventListener("click", () => { const it = done.items[viewer.i]; if (it) editItem(it); });
+$("#vMark").addEventListener("click", () => { const it = done.items[viewer.i]; if (!it) return; it.on = !it.on; if (it.on) getBlob(it).catch(() => {}); renderViewer(); renderDone(); });
+$("#vShare").addEventListener("click", async () => {
+  const it = done.items[viewer.i]; if (!it) return;
+  try{
+    const b = await getBlob(it), f = new File([b], (it.kind === "art" ? "arte" : "montagem") + ".jpg", { type: "image/jpeg" });
+    if (navigator.canShare && navigator.canShare({ files: [f] })) await navigator.share({ files: [f] }); else await saveFile(f.name, b);
+  }catch(e){ if (e && e.name !== "AbortError") toast("Não deu para enviar. Tente baixar."); }
+});
+(() => {
+  const v = $("#viewer"); let x0 = null, y0 = null;
+  v.addEventListener("touchstart", e => { if (e.touches.length === 1){ x0 = e.touches[0].clientX; y0 = e.touches[0].clientY; } }, { passive: true });
+  v.addEventListener("touchend", e => {
+    if (x0 == null) return;
+    const dx = e.changedTouches[0].clientX - x0, dy = e.changedTouches[0].clientY - y0; x0 = null;
+    if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy)) stepViewer(dx < 0 ? 1 : -1);
+    else if (dy > 90 && Math.abs(dy) > Math.abs(dx)) closeViewer();
+  });
+  document.addEventListener("keydown", e => {
+    if (!v.classList.contains("on")) return;
+    if (e.key === "Escape") closeViewer(); else if (e.key === "ArrowLeft") stepViewer(-1); else if (e.key === "ArrowRight") stepViewer(1);
+  });
+})();
+
 async function swapOrd(a, b){
   let oa = a.ord || 0, ob = b.ord || 0; if (oa === ob) ob = oa + 1;
   const [r1, r2] = await Promise.all([
@@ -2466,11 +2567,11 @@ $("#addBtn").addEventListener("click", async () => {
       const r = await SB.from("prontas").update({ path }).eq("id", ed.id).select();
       if (r.error || !r.data.length){ SB.storage.from(PB).remove([path]); throw r.error || new Error("Só quem criou ou o administrador pode alterar"); }
       SB.storage.from(PB).remove([ed.path]);
-      done.snaps.set(ed.id, snapshot()); done.editing = null; toast("Montagem atualizada");
+      setSnap(ed.id, snapshot()); done.editing = null; toast("Atualizada nas Prontas ✅");
     } else {
       const r = await SB.from("prontas").insert({ path, kind, ord: Date.now(), author: (st.me.name || "").split(/\s+/)[0] }).select("id").single();
       if (r.error){ SB.storage.from(PB).remove([path]); throw r.error; }
-      if (kind === "mont") done.snaps.set(r.data.id, snapshot());
+      if (kind === "mont") setSnap(r.data.id, snapshot());
       toast((kind === "art" ? "Arte" : "Montagem") + " salva nas Prontas");
       if (fluxo.link) linkPronta(r.data.id);
     }
@@ -2488,7 +2589,7 @@ armButton($("#delSel"), "Apagar", async () => {
   let ok = 0, no = 0;
   for (const it of m){
     const r = await SB.from("prontas").delete().eq("id", it.id).select();
-    if (!r.error && r.data && r.data.length){ ok++; SB.storage.from(PB).remove([it.path]); done.snaps.delete(it.id); if (done.editing === it.id) done.editing = null; }
+    if (!r.error && r.data && r.data.length){ ok++; SB.storage.from(PB).remove([it.path]); done.snaps.delete(it.id); saveSnaps(); if (done.editing === it.id) done.editing = null; }
     else no++;
   }
   toast(ok + " apagada(s)" + (no ? ". " + no + " não são suas e só o administrador pode apagar." : ""), 3600);
