@@ -273,6 +273,56 @@ textarea.tin{min-height:72px;resize:vertical;margin-top:8px}
 .pill.ok{background:var(--accent-soft);color:var(--accent)}
 .sr{position:absolute;width:1px;height:1px;opacity:0;overflow:hidden}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+.fweek{display:flex;align-items:center;gap:8px;margin-top:4px}
+.fweek-l{flex:1;text-align:center}
+.fweek-l b{display:block;font-size:16px}
+.link2{background:none;border:0;color:var(--accent);font-weight:700;cursor:pointer;padding:2px 6px;font-size:13px}
+.falert{margin-top:12px;border-radius:14px;padding:10px 12px;background:#fde4e2;color:#8b1c14;font-weight:700;font-size:14px}
+.falert.ok{background:#e3f4e6;color:#1d6b33}
+.fnotif{margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;align-items:center;font-size:13px;color:var(--muted)}
+#fDays{display:grid;gap:12px;grid-template-columns:minmax(0,1fr)}
+.fday,.ftask .tt{min-width:0}
+@media (min-width:900px){#fDays{grid-template-columns:repeat(auto-fill,minmax(330px,1fr))}}
+.fday{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--shadow);padding:12px 12px 8px}
+.fday.today{border:2px solid var(--accent)}
+.fday-h{display:flex;align-items:baseline;justify-content:space-between;gap:8px;margin-bottom:6px}
+.fday-h b{font-size:16px}
+.fday-h small{color:var(--muted);font-weight:600}
+.fday-ev{font-size:12.5px;color:var(--muted);margin:-2px 0 8px}
+.ftask{display:flex;align-items:center;gap:10px;width:100%;text-align:left;border:1.5px solid var(--line);background:var(--panel2);border-radius:14px;padding:10px;margin-bottom:6px;cursor:pointer;border-left-width:6px}
+.ftask:active{transform:scale(.99)}
+.ftask .tt{flex:1;min-width:0}
+.ftask .tt b{display:block;font-size:14px}
+.ftask .tt small{display:block;color:var(--muted);font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ftask img{width:40px;height:50px;object-fit:cover;border-radius:7px;flex:none}
+.ftask.s-todo{border-left-color:#b9b4ad}
+.ftask.s-pronta{border-left-color:#e3a21a}
+.ftask.s-postado{border-left-color:#2e9d4f;opacity:.75}
+.ftask.late{border-left-color:#d4262e;background:#fdf0ef}
+.spill{font-size:11px;font-weight:800;border-radius:999px;padding:3px 9px;white-space:nowrap;flex:none}
+.spill.todo{background:#ece9e4;color:#6b6660}
+.spill.pronta{background:#fdf0d3;color:#8a5a00}
+.spill.postado{background:#dcf2e2;color:#1d6b33}
+.spill.late{background:#fde0de;color:#a3221a}
+.ftype{display:inline-block;font-size:11px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;border-radius:8px;padding:3px 8px;background:var(--accent-soft);color:var(--accent)}
+.fday .addt{width:100%;border:1.5px dashed var(--line);background:none;border-radius:12px;padding:8px;color:var(--muted);font-weight:700;cursor:pointer;margin-top:2px}
+.fempty{color:var(--muted);font-size:13px;padding:4px 2px 8px}
+.fsheet{max-width:480px}
+.fstat{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.fstat button{border:2px solid var(--line);background:var(--panel2);border-radius:12px;padding:10px 4px;font-weight:800;font-size:13px;cursor:pointer;color:var(--muted)}
+.fstat button[aria-pressed="true"].todo{border-color:#8f8a84;color:var(--text)}
+.fstat button[aria-pressed="true"].pronta{border-color:#e3a21a;background:#fdf0d3;color:#8a5a00}
+.fstat button[aria-pressed="true"].postado{border-color:#2e9d4f;background:#dcf2e2;color:#1d6b33}
+#fsImgBox img{width:100%;max-height:300px;object-fit:contain;border-radius:12px;background:#0002;display:block}
+#fsImgBox .row{margin-top:8px}
+.fpick{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:8px;max-height:260px;overflow:auto}
+.fpick button{border:2px solid transparent;padding:0;border-radius:10px;overflow:hidden;cursor:pointer;background:var(--panel2)}
+.fpick img{width:100%;aspect-ratio:4/5;object-fit:cover;display:block}
+.flink{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(146px + env(safe-area-inset-bottom,0px));z-index:9;display:flex;align-items:center;gap:8px;background:#1d6b33;color:#fff;border-radius:999px;padding:7px 8px 7px 14px;font-weight:700;font-size:13px;box-shadow:var(--shadow);max-width:calc(100% - 24px)}
+.flink span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.flink button{border:0;background:rgba(255,255,255,.2);color:#fff;border-radius:50%;width:26px;height:26px;cursor:pointer;flex:none}
+nav.top button{font-size:10.5px}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .ftask.late{background:#3a1a18}:root:not([data-theme="light"]) .falert{background:#3a1a18;color:#ffb4ab}:root:not([data-theme="light"]) .falert.ok{background:#173322;color:#9ee0b0}}
 </style>
 </head>
 <body>
@@ -291,6 +341,7 @@ textarea.tin{min-height:72px;resize:vertical;margin-top:8px}
   <symbol id="i-check" viewBox="0 0 24 24"><path d="M5 12l5 5 9-10"/></symbol>
   <symbol id="i-pin" viewBox="0 0 24 24"><path d="M12 21s7-6 7-11a7 7 0 10-14 0c0 5 7 11 7 11z"/><circle cx="12" cy="10" r="2.5"/></symbol>
   <symbol id="i-zip" viewBox="0 0 24 24"><path d="M6 3h9l4 4v14H6z"/><path d="M11 3v2h2v2h-2v2h2v2h-2v3"/></symbol>
+  <symbol id="i-cal" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M3 10h18M8 3v4M16 3v4M8 15l2.5 2.5L16 13"/></symbol>
   <symbol id="i-trash" viewBox="0 0 24 24"><path d="M4 7h16M10 7V4h4v3M6 7l1 13h10l1-13"/></symbol>
 </svg>
 
@@ -339,6 +390,7 @@ textarea.tin{min-height:72px;resize:vertical;margin-top:8px}
   <button role="tab" data-view="mont" aria-selected="true"><svg class="i"><use href="#i-grid"/></svg>Montar</button>
   <button role="tab" data-view="arte" aria-selected="false"><svg class="i"><use href="#i-art"/></svg>Arte do dia</button>
   <button role="tab" data-view="done" aria-selected="false" id="doneTab"><svg class="i"><use href="#i-stack"/></svg>Prontas<span class="badge" id="doneBadge" hidden>0</span></button>
+  <button role="tab" data-view="fluxo" aria-selected="false" id="fluxoTab" hidden><svg class="i"><use href="#i-cal"/></svg>Fluxo<span class="badge" id="fluxoBadge" hidden>0</span></button>
   <button role="tab" data-view="lib" aria-selected="false"><svg class="i"><use href="#i-lib"/></svg>Biblioteca</button>
 </nav>
 
@@ -554,6 +606,22 @@ textarea.tin{min-height:72px;resize:vertical;margin-top:8px}
   </div>
 </section>
 
+<!-- FLUXO DA MÍDIA -->
+<section class="view" id="v-fluxo">
+  <div class="panel">
+    <div class="ptitle"><span class="ic"><svg class="i"><use href="#i-cal"/></svg></span><h2>Fluxo da Mídia</h2></div>
+    <p class="lead">Postagens da semana. O convite de cada reunião vai no dia anterior. As tarefas são criadas sozinhas pela Programação da semana (Arte do dia).</p>
+    <div class="fweek">
+      <button class="zb" id="fPrev" aria-label="Semana anterior">‹</button>
+      <div class="fweek-l"><b id="fWeekLbl"></b><button class="link2" id="fToday">Ir para hoje</button></div>
+      <button class="zb" id="fNext" aria-label="Próxima semana">›</button>
+    </div>
+    <div class="falert" id="fAlert" hidden></div>
+    <div class="fnotif" id="fNotif"></div>
+  </div>
+  <div id="fDays"></div>
+</section>
+
 <!-- BIBLIOTECA -->
 <section class="view" id="v-lib">
   <div class="libgrid">
@@ -637,6 +705,39 @@ textarea.tin{min-height:72px;resize:vertical;margin-top:8px}
   <button class="btn big" id="dlBtn" aria-label="Baixar só esta" title="Baixar só esta"><svg class="i"><use href="#i-dl"/></svg></button>
   <button class="btn primary big" id="addBtn"><svg class="i"><use href="#i-plus"/></svg><span id="addLbl">Adicionar à lista</span></button>
 </div>
+<div class="modal" id="fSheet"><div class="box2 fsheet">
+  <div class="row" style="justify-content:space-between;align-items:flex-start;flex-wrap:nowrap">
+    <div><span class="ftype" id="fsType"></span><h2 id="fsTitle" style="margin:6px 0 2px;font-size:19px"></h2><p class="muted" id="fsSub" style="margin:0"></p></div>
+    <button class="zb" id="fsClose" aria-label="Fechar">✕</button>
+  </div>
+  <h3>Situação</h3>
+  <div class="fstat" id="fsStatus"></div>
+  <p class="muted" id="fsDone" style="margin:6px 0 0"></p>
+  <h3>Arte / imagem</h3>
+  <div id="fsImgBox"></div>
+  <div class="row" style="margin-top:8px">
+    <button class="btn small primary" id="fsMake"></button>
+    <button class="btn small" id="fsPick">Escolher das Prontas</button>
+  </div>
+  <div class="fpick" id="fsPickGrid" hidden></div>
+  <h3>Responsável</h3>
+  <select class="tin" id="fsResp"></select>
+  <h3>Observação</h3>
+  <textarea class="tin" id="fsNota" placeholder="Ex.: usar a foto do pastor, marcar a página da FJU…"></textarea>
+  <div class="row" style="margin-top:14px;justify-content:space-between">
+    <button class="btn small" id="fsDel"><svg class="i"><use href="#i-trash"/></svg>Apagar tarefa</button>
+    <button class="btn primary" id="fsOk">Pronto</button>
+  </div>
+</div></div>
+<div class="modal" id="fNew"><div class="box2">
+  <h2 style="margin:0 0 10px;font-size:19px">Nova tarefa</h2>
+  <label class="field"><span>O quê</span><input class="tin" id="fnTitle" placeholder="Ex.: Story do batismo"></label>
+  <label class="field"><span>Tipo</span><select class="tin" id="fnType"><option value="convite">Convite</option><option value="fotos">Fotos</option><option value="stories">Stories</option><option value="outro" selected>Outro</option></select></label>
+  <label class="field"><span>Dia de postar</span><input class="tin" type="date" id="fnDate"></label>
+  <label class="field"><span>Detalhe (opcional)</span><input class="tin" id="fnDet" placeholder="Ex.: às 19h30"></label>
+  <div class="row" style="justify-content:flex-end;margin-top:8px"><button class="btn" id="fnCancel">Cancelar</button><button class="btn primary" id="fnSave">Criar</button></div>
+</div></div>
+<div class="flink" id="fLink" hidden><span id="fLinkTxt"></span><button id="fLinkX" aria-label="Cancelar ligação">✕</button></div>
 <div class="toast" id="toast" role="status"></div>
 <div class="modal" id="modal"><div class="box2"><p style="margin:0 0 10px;font-weight:700">Toque e segure a imagem para salvar</p><img id="modalImg" alt="Imagem pronta"><div class="row" style="margin-top:12px"><button class="btn wide" id="modalClose">Fechar</button></div></div></div>
 
@@ -2268,6 +2369,7 @@ $("#addBtn").addEventListener("click", async () => {
       if (r.error){ SB.storage.from(PB).remove([path]); throw r.error; }
       if (kind === "mont") done.snaps.set(r.data.id, snapshot());
       toast((kind === "art" ? "Arte" : "Montagem") + " salva nas Prontas");
+      if (fluxo.link) linkPronta(r.data.id);
     }
     if (kind === "mont"){ st.slots.forEach(s => { s.photoId = null; s.zoom = 1; s.ox = 0; s.oy = 0; }); st.sel = 0; draw(); syncAdjUI(); }
     await loadDone();
@@ -2332,7 +2434,9 @@ $$("nav.top button").forEach(b => b.addEventListener("click", () => {
   $$("nav.top button").forEach(x => x.setAttribute("aria-selected", x === b));
   $$(".view").forEach(v => v.classList.toggle("on", v.id === "v-" + b.dataset.view));
   const v = b.dataset.view;
-  $("#dlBar").hidden = v === "lib" || v === "done";
+  $("#dlBar").hidden = v === "lib" || v === "done" || v === "fluxo";
+  if (v === "fluxo"){ loadFluxo().then(() => { const t = document.querySelector(".fday.today"); if (t && t.getBoundingClientRect().top > innerHeight * .6) window.scrollTo({ top: t.getBoundingClientRect().top + scrollY - 90, behavior: "smooth" }); }); renderNotif(); }
+  showLink();
   if (v === "done"){ renderDoneFilter(); loadDone(); }
   if (v === "arte") drawArt();
   window.scrollTo(0, 0);
@@ -2342,6 +2446,294 @@ $$(".seg button").forEach(b => b.addEventListener("click", () => {
   $$(".pane").forEach(p => p.classList.toggle("on", p.id === b.dataset.pane));
   if (b.dataset.pane === "p-ajustes") syncAdjUI();
 }));
+
+/* ---------- Fluxo da Mídia ---------- */
+const VAPID_PUBLIC = "BF5MTRQKWgJYOTVfK-N1lzAaQF1lu-W6tmCgxJpIVdiduWFFgprT8gliQVjWSUxCEPqXPZ0Aa_SG3AGTXmq5rpg";
+const FT = { convite: "Convite", fotos: "Fotos", stories: "Stories", outro: "Outro" };
+const FS = { todo: "A fazer", pronta: "Arte pronta", postado: "Postado" };
+const fluxo = { on: false, week: null, tasks: [], late: [], team: new Map(), thumbs: new Map(), gen: 0, cur: null, link: null };
+const ymd = d => d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
+const pymd = s => { const [y, m, d] = s.split("-").map(Number); return new Date(y, m - 1, d); };
+const addDays = (d, n) => { const x = new Date(d); x.setDate(x.getDate() + n); return x; };
+const hojeStr = () => ymd(new Date());
+function weekStart(d){ const x = new Date(d.getFullYear(), d.getMonth(), d.getDate()); x.setDate(x.getDate() - x.getDay()); return x; }
+const isLate = t => t.status !== "postado" && t.post_date < hojeStr();
+const fdate = s => { const d = pymd(s); return d.getDate() + "/" + String(d.getMonth() + 1).padStart(2, "0"); };
+
+async function loadFluxo(silent){
+  if (!fluxo.on || !SB) return;
+  if (Date.now() - fluxo.gen > 10 * 60e3){ fluxo.gen = Date.now(); await SB.rpc("fluxo_gerar", { dias: 14 }); }
+  if (!fluxo.week) fluxo.week = weekStart(new Date());
+  const a = ymd(fluxo.week), b = ymd(addDays(fluxo.week, 6)), hoje = hojeStr();
+  const [w, l, eq] = await Promise.all([
+    SB.from("fluxo_tarefas").select("*").gte("post_date", a).lte("post_date", b).order("post_date").order("created_at"),
+    SB.from("fluxo_tarefas").select("*").lt("post_date", hoje).neq("status", "postado").order("post_date").limit(60),
+    fluxo.team.size ? Promise.resolve(null) : SB.rpc("fluxo_equipe")
+  ]);
+  if (w.error){ if (!silent) toast("Não deu para carregar o Fluxo" + errHint(w.error), 3800); return; }
+  fluxo.tasks = w.data || []; fluxo.late = l.data || [];
+  if (eq && eq.data) eq.data.forEach(p => fluxo.team.set(p.id, p.name || "Sem nome"));
+  await loadThumbs(fluxo.tasks.concat(fluxo.late));
+  renderFluxo(); updateFluxoBadge();
+}
+async function loadThumbs(list){
+  const ids = [...new Set(list.map(t => t.pronta_id).filter(id => id && !fluxo.thumbs.has(id)))];
+  if (!ids.length) return;
+  const r = await SB.from("prontas").select("id,path").in("id", ids);
+  if (r.error || !r.data.length) return;
+  const s = await SB.storage.from(PB).createSignedUrls(r.data.map(x => x.path), 6 * 3600);
+  const byPath = new Map((s.data || []).map(u => [u.path, u.signedUrl]));
+  r.data.forEach(x => fluxo.thumbs.set(x.id, { url: byPath.get(x.path), path: x.path }));
+}
+function updateFluxoBadge(){
+  const hoje = hojeStr();
+  const n = fluxo.late.length + fluxo.tasks.filter(t => t.post_date === hoje && t.status !== "postado").length;
+  const bd = $("#fluxoBadge"); bd.textContent = n; bd.hidden = !n;
+}
+function progEvent(dateStr){
+  const d = pymd(dateStr), dw = d.getDay(), p = st.prog || { dias: [], extras: [] };
+  const out = [];
+  if (p.dias[dw] && p.dias[dw].h) out.push(p.dias[dw].h);
+  (p.extras || []).filter(e => e.d === dw && e.n).forEach(e => out.push(e.n));
+  return out.join(" • ");
+}
+function taskRow(t){
+  const b = document.createElement("button");
+  const late = isLate(t);
+  b.className = "ftask s-" + t.status + (late ? " late" : "");
+  const th = t.pronta_id && fluxo.thumbs.get(t.pronta_id);
+  b.innerHTML = (th && th.url ? '<img alt="">' : "") + '<span class="tt"><b></b><small></small></span><span class="spill"></span>';
+  if (th && th.url) b.querySelector("img").src = th.url;
+  b.querySelector("b").textContent = t.titulo;
+  const resp = t.responsavel ? fluxo.team.get(t.responsavel) : "";
+  b.querySelector("small").textContent = [FT[t.tipo] || "", t.detalhe, resp ? "👤 " + resp.split(/\s+/)[0] : ""].filter(Boolean).join(" • ");
+  const sp = b.querySelector(".spill");
+  sp.className = "spill " + (late ? "late" : t.status);
+  sp.textContent = late ? "Atrasado" : FS[t.status];
+  b.addEventListener("click", () => openTask(t));
+  return b;
+}
+function renderFluxo(){
+  if (!fluxo.week) return;
+  const a = fluxo.week, b = addDays(a, 6), hoje = hojeStr();
+  $("#fWeekLbl").textContent = a.getDate() + "/" + String(a.getMonth() + 1).padStart(2, "0") + " a " + b.getDate() + "/" + String(b.getMonth() + 1).padStart(2, "0");
+  $("#fToday").hidden = ymd(weekStart(new Date())) === ymd(a);
+  const al = $("#fAlert"), hojeP = fluxo.tasks.filter(t => t.post_date === hoje && t.status !== "postado");
+  if (fluxo.late.length){ al.hidden = false; al.className = "falert"; al.textContent = "⚠️ " + fluxo.late.length + (fluxo.late.length === 1 ? " postagem atrasada" : " postagens atrasadas") + ". Elas aparecem no topo em vermelho."; }
+  else if (ymd(weekStart(new Date())) === ymd(a)){ al.hidden = false; al.className = "falert" + (hojeP.length ? "" : " ok"); al.textContent = hojeP.length ? "📌 Hoje: " + hojeP.length + (hojeP.length === 1 ? " postagem para fazer" : " postagens para fazer") : "✅ Tudo em dia hoje!"; if (hojeP.length) al.style.background = "var(--accent-soft)", al.style.color = "var(--accent)"; else al.style.background = al.style.color = ""; }
+  else al.hidden = true;
+  const box = $("#fDays"); box.innerHTML = "";
+  if (fluxo.late.length && ymd(weekStart(new Date())) === ymd(a)){
+    const c = document.createElement("div"); c.className = "fday";
+    c.innerHTML = '<div class="fday-h"><b style="color:#d4262e">Atrasadas</b><small></small></div>';
+    fluxo.late.forEach(t => { const r = taskRow(t); r.querySelector("small").textContent = "Era para " + fdate(t.post_date) + " • " + r.querySelector("small").textContent; c.appendChild(r); });
+    box.appendChild(c);
+  }
+  for (let i = 0; i < 7; i++){
+    const d = addDays(a, i), ds = ymd(d);
+    const c = document.createElement("div"); c.className = "fday" + (ds === hoje ? " today" : "");
+    c.innerHTML = '<div class="fday-h"><b></b><small></small></div><div class="fday-ev"></div>';
+    c.querySelector("b").textContent = DIAS[d.getDay()] + (ds === hoje ? " (hoje)" : "");
+    c.querySelector("small").textContent = fdate(ds);
+    const ev = progEvent(ds); c.querySelector(".fday-ev").textContent = ev ? "Reunião: " + ev : "";
+    const list = fluxo.tasks.filter(t => t.post_date === ds);
+    if (!list.length){ const e = document.createElement("div"); e.className = "fempty"; e.textContent = "Nada para postar."; c.appendChild(e); }
+    list.forEach(t => c.appendChild(taskRow(t)));
+    const add = document.createElement("button"); add.className = "addt"; add.textContent = "+ Tarefa neste dia";
+    add.addEventListener("click", () => openNew(ds)); c.appendChild(add);
+    box.appendChild(c);
+  }
+}
+$("#fPrev").addEventListener("click", () => { fluxo.week = addDays(fluxo.week, -7); loadFluxo(); });
+$("#fNext").addEventListener("click", () => { fluxo.week = addDays(fluxo.week, 7); loadFluxo(); });
+$("#fToday").addEventListener("click", () => { fluxo.week = weekStart(new Date()); loadFluxo(); });
+
+/* tarefa aberta */
+async function patchTask(t, ch){
+  const r = await SB.from("fluxo_tarefas").update(ch).eq("id", t.id).select().single();
+  if (r.error){ toast("Não deu para salvar" + errHint(r.error), 3600); return false; }
+  Object.assign(t, r.data);
+  [fluxo.tasks, fluxo.late].forEach(L => L.forEach(x => { if (x.id === t.id) Object.assign(x, r.data); }));
+  fluxo.late = fluxo.late.filter(isLate);
+  renderFluxo(); updateFluxoBadge(); return true;
+}
+function renderSheet(){
+  const t = fluxo.cur; if (!t) return;
+  $("#fsType").textContent = FT[t.tipo] || "Tarefa";
+  $("#fsTitle").textContent = t.titulo;
+  const sub = ["Postar em " + DIAS[pymd(t.post_date).getDay()] + " " + fdate(t.post_date)];
+  if (t.event_date && t.event_date !== t.post_date) sub.push("reunião em " + fdate(t.event_date));
+  if (t.detalhe) sub.push(t.detalhe);
+  $("#fsSub").textContent = sub.join(" • ");
+  const box = $("#fsStatus"); box.innerHTML = "";
+  ["todo", "pronta", "postado"].forEach(s => {
+    const b = document.createElement("button"); b.className = s; b.textContent = FS[s]; b.setAttribute("aria-pressed", t.status === s);
+    b.addEventListener("click", async () => {
+      const ch = { status: s };
+      if (s === "postado"){ ch.done_by = st.me.id; ch.done_at = new Date().toISOString(); } else { ch.done_by = null; ch.done_at = null; }
+      if (await patchTask(t, ch)){ renderSheet(); if (s === "postado") toast("Marcado como postado ✅"); }
+    });
+    box.appendChild(b);
+  });
+  $("#fsDone").textContent = t.status === "postado" && t.done_at ? "Postado por " + ((fluxo.team.get(t.done_by) || "alguém").split(/\s+/)[0]) + " em " + new Date(t.done_at).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }) : "";
+  const ib = $("#fsImgBox"); ib.innerHTML = "";
+  const th = t.pronta_id && fluxo.thumbs.get(t.pronta_id);
+  if (th && th.url){
+    ib.innerHTML = '<img alt="Arte ligada"><div class="row"><button class="btn small primary" data-a="sh">Compartilhar</button><button class="btn small" data-a="dl">Baixar</button><button class="btn small" data-a="un">Desligar</button></div>';
+    ib.querySelector("img").src = th.url;
+    const getB = async () => { const r = await SB.storage.from(PB).download(th.path); if (r.error) throw r.error; return r.data; };
+    ib.querySelector('[data-a="sh"]').addEventListener("click", async () => {
+      try{ const bl = await getB(); const f = new File([bl], "postagem.jpg", { type: "image/jpeg" });
+        if (navigator.canShare && navigator.canShare({ files: [f] })) await navigator.share({ files: [f] }); else await saveFile("postagem.jpg", bl);
+      }catch(e){ if (e && e.name !== "AbortError") toast("Não deu para compartilhar. Use Baixar."); }
+    });
+    ib.querySelector('[data-a="dl"]').addEventListener("click", async () => { try{ await saveFile("postagem.jpg", await getB()); }catch(e){ toast("Não deu para baixar"); } });
+    ib.querySelector('[data-a="un"]').addEventListener("click", async () => { if (await patchTask(t, { pronta_id: null, status: t.status === "pronta" ? "todo" : t.status })) renderSheet(); });
+  } else ib.innerHTML = '<p class="muted" style="margin:0">Nenhuma arte ligada ainda.</p>';
+  $("#fsMake").textContent = t.tipo === "convite" ? "Fazer o convite na Arte do dia" : "Fazer a montagem agora";
+  const sel = $("#fsResp"); sel.innerHTML = '<option value="">Ninguém</option>';
+  fluxo.team.forEach((n, id) => { const o = document.createElement("option"); o.value = id; o.textContent = n; sel.appendChild(o); });
+  sel.value = t.responsavel || "";
+  $("#fsNota").value = t.nota || "";
+  $("#fsPickGrid").hidden = true;
+}
+function openTask(t){ fluxo.cur = t; renderSheet(); $("#fSheet").classList.add("on"); }
+function closeSheet(){
+  const t = fluxo.cur; $("#fSheet").classList.remove("on");
+  if (t && ($("#fsNota").value || "") !== (t.nota || "")) patchTask(t, { nota: $("#fsNota").value });
+  fluxo.cur = null;
+}
+$("#fsClose").addEventListener("click", closeSheet);
+$("#fsOk").addEventListener("click", closeSheet);
+$("#fsResp").addEventListener("change", e => { if (fluxo.cur) patchTask(fluxo.cur, { responsavel: e.target.value || null }); });
+armButton($("#fsDel"), "Apagar tarefa", async () => {
+  const t = fluxo.cur; if (!t) return;
+  const r = await SB.from("fluxo_tarefas").delete().eq("id", t.id);
+  if (r.error) return toast("Não deu para apagar" + errHint(r.error));
+  fluxo.tasks = fluxo.tasks.filter(x => x.id !== t.id); fluxo.late = fluxo.late.filter(x => x.id !== t.id);
+  fluxo.cur = null; $("#fSheet").classList.remove("on"); renderFluxo(); updateFluxoBadge(); toast("Tarefa apagada");
+});
+$("#fsDel").innerHTML = '<svg class="i"><use href="#i-trash"/></svg>Apagar tarefa';
+$("#fsMake").addEventListener("click", () => {
+  const t = fluxo.cur; if (!t) return;
+  fluxo.link = { id: t.id, titulo: t.titulo };
+  $("#fSheet").classList.remove("on");
+  if (t.tipo === "convite" && t.event_date){
+    $('nav.top [data-view="arte"]').click();
+    const dw = pymd(t.event_date).getDay(), m = /^convite:([^:]+):/.exec(t.chave || "");
+    const ex = m && (st.prog.extras || []).find(e => e.id === m[1]);
+    if (ex){ art.day = dw; applyExtra(ex); } else applyDay(dw, true);
+  } else $('nav.top [data-view="mont"]').click();
+  showLink();
+});
+function showLink(){
+  const v = curView(), on = fluxo.link && (v === "arte" || v === "mont");
+  $("#fLink").hidden = !on;
+  if (on) $("#fLinkTxt").textContent = "🔗 Para o Fluxo: " + fluxo.link.titulo;
+}
+$("#fLinkX").addEventListener("click", () => { fluxo.link = null; showLink(); });
+async function linkPronta(prontaId){
+  if (!fluxo.link) return;
+  const id = fluxo.link.id; fluxo.link = null; showLink();
+  const r = await SB.from("fluxo_tarefas").select("*").eq("id", id).maybeSingle();
+  if (!r.data) return;
+  const t = r.data, ch = { pronta_id: prontaId };
+  if (t.status === "todo") ch.status = "pronta";
+  const u = await SB.from("fluxo_tarefas").update(ch).eq("id", id);
+  if (!u.error) toast("Ligada ao Fluxo: " + t.titulo + " ✅", 3200);
+  loadFluxo(true);
+}
+$("#fsPick").addEventListener("click", async () => {
+  const g = $("#fsPickGrid");
+  if (!g.hidden){ g.hidden = true; return; }
+  g.hidden = false; g.innerHTML = '<p class="muted">Carregando…</p>';
+  const r = await SB.from("prontas").select("id,path,kind,created_at").gte("created_at", new Date(Date.now() - 4 * 864e5).toISOString()).order("created_at", { ascending: false }).limit(40);
+  if (r.error || !r.data.length){ g.innerHTML = '<p class="muted">Nenhuma pronta nos últimos dias.</p>'; return; }
+  const s = await SB.storage.from(PB).createSignedUrls(r.data.map(x => x.path), 3600);
+  const byPath = new Map((s.data || []).map(u => [u.path, u.signedUrl]));
+  g.innerHTML = "";
+  r.data.forEach(x => {
+    const b = document.createElement("button"); b.innerHTML = '<img alt="" loading="lazy">'; b.querySelector("img").src = byPath.get(x.path) || "";
+    b.addEventListener("click", async () => {
+      fluxo.thumbs.set(x.id, { url: byPath.get(x.path), path: x.path });
+      const t = fluxo.cur; if (!t) return;
+      if (await patchTask(t, Object.assign({ pronta_id: x.id }, t.status === "todo" ? { status: "pronta" } : {}))) renderSheet();
+    });
+    g.appendChild(b);
+  });
+});
+
+/* nova tarefa */
+function openNew(ds){ $("#fnTitle").value = ""; $("#fnDet").value = ""; $("#fnType").value = "outro"; $("#fnDate").value = ds || hojeStr(); $("#fNew").classList.add("on"); setTimeout(() => $("#fnTitle").focus(), 50); }
+$("#fnCancel").addEventListener("click", () => $("#fNew").classList.remove("on"));
+$("#fnSave").addEventListener("click", async () => {
+  const titulo = $("#fnTitle").value.trim(); if (!titulo) return toast("Escreva o que é a tarefa");
+  const post_date = $("#fnDate").value || hojeStr(), tipo = $("#fnType").value;
+  const r = await SB.from("fluxo_tarefas").insert({ titulo, tipo, post_date, event_date: tipo === "convite" ? ymd(addDays(pymd(post_date), 1)) : post_date, detalhe: $("#fnDet").value.trim() || null });
+  if (r.error) return toast("Não deu para criar" + errHint(r.error), 3600);
+  $("#fNew").classList.remove("on"); toast("Tarefa criada"); loadFluxo();
+});
+
+/* notificações */
+const b64u = s => { const p = "=".repeat((4 - s.length % 4) % 4), b = atob((s + p).replace(/-/g, "+").replace(/_/g, "/")); return Uint8Array.from(b, c => c.charCodeAt(0)); };
+async function pushState(){
+  if (!("serviceWorker" in navigator) || !("PushManager" in window) || !("Notification" in window)) return "sem";
+  if (Notification.permission === "denied") return "negado";
+  try{ const reg = await navigator.serviceWorker.ready; const sub = await reg.pushManager.getSubscription(); return sub ? "on" : "off"; }catch(e){ return "off"; }
+}
+async function renderNotif(){
+  const box = $("#fNotif"), s = await pushState();
+  box.innerHTML = "";
+  const txt = document.createElement("span");
+  const btn = document.createElement("button"); btn.className = "btn small";
+  if (s === "sem"){ txt.textContent = "🔕 Este navegador não recebe notificações. No iPhone, instale o app na tela inicial primeiro."; box.append(txt); return; }
+  if (s === "negado"){ txt.textContent = "🔕 Notificações bloqueadas. Libere em Configurações do site > Notificações."; box.append(txt); return; }
+  if (s === "on"){
+    txt.textContent = "🔔 Avisos ligados neste celular (todo dia às 9h).";
+    btn.textContent = "Testar agora"; btn.addEventListener("click", testPush);
+    const off = document.createElement("button"); off.className = "btn small"; off.textContent = "Desligar";
+    off.addEventListener("click", async () => {
+      try{ const reg = await navigator.serviceWorker.ready, sub = await reg.pushManager.getSubscription(); if (sub){ await SB.from("push_subs").delete().eq("endpoint", sub.endpoint); await sub.unsubscribe(); } }catch(e){}
+      renderNotif();
+    });
+    box.append(txt, btn, off);
+  } else {
+    txt.textContent = "Receba o aviso das postagens no celular, todo dia às 9h.";
+    btn.className = "btn small primary"; btn.textContent = "🔔 Ativar avisos"; btn.addEventListener("click", enablePush);
+    box.append(btn, txt);
+  }
+}
+async function enablePush(){
+  try{
+    const perm = await Notification.requestPermission();
+    if (perm !== "granted") return renderNotif();
+    const reg = await navigator.serviceWorker.ready;
+    let sub = await reg.pushManager.getSubscription();
+    if (!sub) sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: b64u(VAPID_PUBLIC) });
+    const j = sub.toJSON();
+    const r = await SB.from("push_subs").upsert({ endpoint: j.endpoint, p256dh: j.keys.p256dh, auth: j.keys.auth, user_id: st.me.id }, { onConflict: "endpoint" });
+    if (r.error) throw r.error;
+    toast("Avisos ligados ✅"); renderNotif();
+  }catch(e){ toast("Não deu para ligar os avisos" + errHint(e), 4000); renderNotif(); }
+}
+async function testPush(){
+  toast("Enviando teste…");
+  try{
+    const r = await SB.functions.invoke("fluxo-notificar", { body: { teste: true } });
+    if (r.error) throw r.error;
+    const d = r.data || {};
+    toast(d.enviado ? "Teste enviado! Deve chegar em segundos." : "A função respondeu, mas nenhum celular recebeu" + (d.falhas && d.falhas.length ? " (" + d.falhas[0] + ")" : ""), 4200);
+  }catch(e){ toast("A função de aviso ainda não está publicada no Supabase (veja o guia).", 4500); }
+}
+if (navigator.serviceWorker) navigator.serviceWorker.addEventListener("message", e => { if (e.data && e.data.abrir === "fluxo" && fluxo.on) $('nav.top [data-view="fluxo"]').click(); });
+
+function setFluxoAccess(on){
+  fluxo.on = on;
+  $("#fluxoTab").hidden = !on;
+  if (!on) return;
+  loadFluxo(true); renderNotif();
+  if (/[?&]aba=fluxo/.test(location.search)){ $('nav.top [data-view="fluxo"]').click(); history.replaceState(null, "", location.pathname); }
+}
 
 /* ---------- Init ---------- */
 buildSliders(); renderFormats(); renderLayoutChips(); renderTray(); renderLyEditor(); syncAdjUI(); syncTxUI();
@@ -2381,7 +2773,7 @@ async function loadCfg(){
   applyCfg(); renderLogoLib();
   if (!st._logoTouched && st.cfg.defaultLogoId && st.logos.find(l => l.id === st.cfg.defaultLogoId)){ st.logoId = st.cfg.defaultLogoId; applyLogoPos(); renderLogoChips(); draw(); }
 }
-async function loadAll(){ await loadLogos(); await Promise.all([loadLayouts(), loadCfg(), loadPresets(), loadSaved(), loadDone()]); if (st.isAdmin) loadTeam(false); }
+async function loadAll(){ await loadLogos(); await Promise.all([loadLayouts(), loadCfg(), loadPresets(), loadSaved(), loadDone()]); if (st.isAdmin) loadTeam(false); if (fluxo.on) loadFluxo(true); }
 
 let mode = "in";
 function amsg(t, err){ const m = $("#aMsg"); m.textContent = t || ""; m.classList.toggle("err", !!err); }
@@ -2475,6 +2867,7 @@ async function enter(session){
   $("#acctName").textContent = name;
   $("#acctEmail").textContent = (u.email || "") + (st.isAdmin ? " (administrador)" : "");
   applyRole();
+  setFluxoAccess(!!(p.is_admin || p.fluxo));
   $("#auth").hidden = true; amsg("");
   if (!entered){ entered = true; await loadAll(); }
 }
@@ -2498,7 +2891,7 @@ async function loadTeam(notify = true){
   if (r.error) return;
   r.data.forEach(p => {
     const it = document.createElement("div"); it.className = "teamitem";
-    it.innerHTML = '<div class="who"><b></b><small></small></div><span class="pill"></span><button class="btn small" data-a="ap"></button><button class="btn small" data-a="ad"></button><button class="btn small" data-a="rm">Remover</button>';
+    it.innerHTML = '<div class="who"><b></b><small></small></div><span class="pill"></span><button class="btn small" data-a="ap"></button><button class="btn small" data-a="ad"></button><button class="btn small" data-a="fx"></button><button class="btn small" data-a="rm">Remover</button>';
     it.querySelector("b").textContent = p.name || "(sem nome)";
     it.querySelector("small").textContent = p.email || "";
     const pill = it.querySelector(".pill");
@@ -2507,7 +2900,14 @@ async function loadTeam(notify = true){
     const ap = it.querySelector('[data-a="ap"]'), ad = it.querySelector('[data-a="ad"]');
     ap.textContent = p.approved ? "Bloquear" : "Liberar"; if (!p.approved) ap.classList.add("primary");
     ad.textContent = p.is_admin ? "Tirar admin" : "Tornar admin"; ad.hidden = !p.approved;
-    const rm = it.querySelector('[data-a="rm"]');
+    const rm = it.querySelector('[data-a="rm"]'), fx = it.querySelector('[data-a="fx"]');
+    fx.textContent = p.fluxo ? "Fluxo: liberado" : "Liberar Fluxo"; fx.hidden = !p.approved || p.is_admin;
+    if (p.fluxo) fx.classList.add("soft");
+    fx.addEventListener("click", async () => {
+      const x = await SB.from("profiles").update({ fluxo: !p.fluxo }).eq("id", p.id);
+      if (x.error) toast("Não deu" + errHint(x.error)); else toast(p.fluxo ? "Fluxo bloqueado para " + (p.name || "") : "Fluxo liberado para " + (p.name || ""));
+      loadTeam(false);
+    });
     if (st.me && p.id === st.me.id){ ap.hidden = true; ad.hidden = true; rm.hidden = true; }
     armButton(rm, "Remover", async () => {
       const x = await SB.rpc("admin_delete_user", { uid: p.id });
