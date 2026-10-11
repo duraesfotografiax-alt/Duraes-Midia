@@ -134,7 +134,7 @@ h3:first-child{margin-top:0}
 .thumb:active{transform:scale(.94)}
 .thumb img{width:100%;height:100%;object-fit:cover;display:block}
 .thumb.used::after{content:"";position:absolute;inset:0;border:3px solid var(--accent);border-radius:12px;background:rgba(235,91,2,.14)}
-.thumb .tk{position:absolute;right:4px;bottom:4px;z-index:1;background:rgba(0,0,0,.6);color:#fff;font-size:10.5px;font-weight:800;border-radius:6px;padding:1px 5px;font-variant-numeric:tabular-nums}
+.thumb .tk{position:absolute;left:4px;right:4px;bottom:4px;z-index:1;background:rgba(0,0,0,.6);color:#fff;font-size:9.5px;font-weight:700;border-radius:6px;padding:1px 4px;font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:center}
 .ordbar{display:flex;align-items:center;gap:6px;margin-top:12px;font-size:13px;font-weight:700;color:var(--muted);flex-wrap:wrap}
 .ordbar button{border:1.5px solid var(--line);background:var(--panel2);border-radius:999px;padding:6px 12px;font-weight:800;font-size:12.5px;color:var(--muted);cursor:pointer}
 .ordbar button[aria-pressed="true"]{border-color:var(--accent);background:var(--accent-soft);color:var(--accent)}
@@ -459,8 +459,9 @@ nav.top button{font-size:10.5px}
       <p class="ai" id="aiStatus"></p>
       <div class="ordbar" id="orderChips" hidden>
         <span>Ordem:</span>
-        <button data-o="antigas" aria-pressed="true">Primeiras tiradas</button>
-        <button data-o="recentes" aria-pressed="false">Mais recentes</button>
+        <button data-o="az" aria-pressed="true">Nome A a Z</button>
+        <button data-o="za" aria-pressed="false">Z a A</button>
+        <button data-o="hora" aria-pressed="false">Hora da foto</button>
       </div>
       <div id="tray" class="tray"></div>
     </div>
@@ -1057,18 +1058,20 @@ async function photoDate(file){
   if (n) return new Date(+n[1], +n[2] - 1, +n[3], +n[4], +n[5], +n[6]).getTime();
   return file.lastModified || Date.now();
 }
-st.photoOrder = LS.get("photoOrder", "antigas");
+st.photoOrder = LS.get("photoOrder2", "az");
+const byName = (a, b) => String(a.name || "").localeCompare(String(b.name || ""), "pt-BR", { numeric: true, sensitivity: "base" });
 function sortPhotos(){
-  const dir = st.photoOrder === "recentes" ? -1 : 1;
-  st.photos.sort((a, b) => ((a.taken || 0) - (b.taken || 0)) * dir || String(a.name).localeCompare(String(b.name)) * dir);
+  if (st.photoOrder === "hora") st.photos.sort((a, b) => ((a.taken || 0) - (b.taken || 0)) || byName(a, b));
+  else if (st.photoOrder === "za") st.photos.sort((a, b) => byName(b, a));
+  else st.photos.sort(byName);
 }
 function renderOrderChips(){
   const box = $("#orderChips"); if (!box) return;
   box.hidden = st.photos.length < 2;
   box.querySelectorAll("button").forEach(b => b.setAttribute("aria-pressed", b.dataset.o === st.photoOrder));
 }
-function setPhotoOrder(o){ st.photoOrder = o; LS.set("photoOrder", o); sortPhotos(); renderTray(); saveSession(); }
-const fmtTaken = ms => { const d = new Date(ms); return String(d.getHours()).padStart(2, "0") + ":" + String(d.getMinutes()).padStart(2, "0"); };
+function setPhotoOrder(o){ st.photoOrder = o; LS.set("photoOrder2", o); sortPhotos(); renderTray(); saveSession(); }
+const shortName = n => { const b = String(n || "").replace(/\.[^.]+$/, ""); return b.length > 10 ? "…" + b.slice(-8) : b; };
 $$("#orderChips button").forEach(b => b.addEventListener("click", () => setPhotoOrder(b.dataset.o)));
 
 /* ---------- Image processing (Lightroom-like) ---------- */
@@ -1230,9 +1233,10 @@ function renderTray(){
   st.photos.forEach(p => {
     const b = document.createElement("button");
     b.className = "thumb"; b.dataset.id = p.id; b.title = "Colocar no espaço selecionado";
-    b.innerHTML = '<img alt="">' + (p.taken ? '<span class="tk"></span>' : "");
+    b.innerHTML = '<img alt=""><span class="tk"></span>';
     b.querySelector("img").src = p.thumb;
-    if (p.taken) b.querySelector(".tk").textContent = fmtTaken(p.taken);
+    b.querySelector(".tk").textContent = shortName(p.name);
+    b.title = p.name || "";
     b.addEventListener("click", () => assignPhoto(p.id));
     tray.appendChild(b);
   });
