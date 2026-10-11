@@ -241,7 +241,8 @@ input[type=range]:disabled{opacity:.4}
 .erow input,.erow select{width:100%;min-width:0;border:1.5px solid var(--line);background:var(--panel);border-radius:10px;padding:8px 10px;font-size:14px}
 .erow select{width:auto}
 .zbar{display:flex;align-items:center;gap:6px;margin-top:10px;padding:6px;border-radius:14px;background:var(--panel2)}
-.zbar input{flex:1;min-width:60px}
+.zbar input{flex:1;min-width:40px}
+@media (max-width:420px){.zbar{gap:4px}.zbar .zb{width:34px;height:36px;font-size:17px}}
 .zb{width:40px;height:40px;border-radius:12px;border:1.5px solid var(--line);background:var(--panel);font-size:19px;font-weight:800;cursor:pointer;flex:none;display:grid;place-items:center;color:var(--text)}
 .zb:active{transform:scale(.94)}
 .dayh{grid-column:1/-1;font-size:12px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:10px 2px 0}
@@ -451,7 +452,9 @@ nav.top button{font-size:10.5px}
       <button class="zb" id="zOut" aria-label="Diminuir zoom">−</button>
       <input type="range" id="zoom" min="1" max="4" step="0.01" value="1" aria-label="Zoom da foto">
       <button class="zb" id="zIn" aria-label="Aumentar zoom">+</button>
-      <button class="zb" id="centerBtn" aria-label="Centralizar" title="Centralizar">⟲</button>
+      <button class="zb" id="flipBtn" aria-label="Inverter a foto (espelhar)" title="Inverter (espelhar)">⇆</button>
+      <button class="zb" id="rotBtn" aria-label="Girar a foto" title="Girar">↻</button>
+      <button class="zb" id="centerBtn" aria-label="Centralizar" title="Centralizar">⊙</button>
       <button class="zb" id="clearSlot" aria-label="Tirar foto do espaço" title="Tirar foto do espaço">✕</button>
     </div>
     <p class="hint" id="pvHint"><svg class="i"><use href="#i-hand"/></svg>Toque num espaço, arraste para enquadrar e use dois dedos para dar zoom.</p>
@@ -1412,6 +1415,25 @@ const zoomBy = f => { const s = st.slots[st.sel]; if (s && s.photoId){ s.zoom = 
 $("#zoom").addEventListener("input", e => { const s = st.slots[st.sel]; if (s){ s.zoom = +e.target.value; draw(); } });
 $("#zIn").addEventListener("click", () => zoomBy(1.15));
 $("#zOut").addEventListener("click", () => zoomBy(1 / 1.15));
+/* Inverter (espelhar) e girar a foto do espaço selecionado */
+function transformPhoto(kind){
+  const s = st.slots[st.sel], ph = s && st.photos.find(p => p.id === s.photoId);
+  if (!ph) return toast("Toque num espaço com foto primeiro");
+  const src = ph.work, c = document.createElement("canvas"), x = c.getContext("2d");
+  if (kind === "rot"){ c.width = src.height; c.height = src.width; x.translate(c.width, 0); x.rotate(Math.PI / 2); }
+  else { c.width = src.width; c.height = src.height; x.translate(c.width, 0); x.scale(-1, 1); }
+  x.drawImage(src, 0, 0);
+  ph.work = c; ph.proc = null; ph.procKey = "";
+  const tc = document.createElement("canvas"), ts = 240 / Math.max(c.width, c.height);
+  tc.width = Math.round(c.width * ts); tc.height = Math.round(c.height * ts); tc.getContext("2d").drawImage(c, 0, 0, tc.width, tc.height);
+  ph.thumb = tc.toDataURL("image/jpeg", .8);
+  if (kind === "rot"){ s.zoom = 1; s.ox = 0; s.oy = 0; } else s.ox = -s.ox;
+  sessSavePhoto(ph, ph.seq || Date.now());
+  renderTray(); draw();
+  toast(kind === "rot" ? "Foto girada" : "Foto invertida");
+}
+$("#flipBtn").addEventListener("click", () => transformPhoto("flip"));
+$("#rotBtn").addEventListener("click", () => transformPhoto("rot"));
 $("#centerBtn").addEventListener("click", () => { const s = st.slots[st.sel]; if (s){ s.ox = 0; s.oy = 0; s.zoom = 1; draw(); } });
 $("#clearSlot").addEventListener("click", () => { const s = st.slots[st.sel]; if (s){ s.photoId = null; draw(); syncAdjUI(); } });
 
