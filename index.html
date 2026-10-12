@@ -385,6 +385,7 @@ nav.top button{padding-left:2px;padding-right:2px;min-width:0}
 .lfold summary::-webkit-details-marker{display:none}
 .lfold summary svg{width:26px;height:26px;color:var(--accent)}
 .lfold summary b{flex:1}
+.lfold summary .ren{padding:5px 10px;font-size:12px}
 .lgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px;padding:0 10px 10px}
 .lcard{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:8px;display:grid;gap:6px;min-width:0}
 .lcard img{width:100%;height:70px;object-fit:contain;background:repeating-conic-gradient(#8882 0 25%,transparent 0 50%) 0 0/12px 12px;border-radius:10px}
@@ -1833,6 +1834,19 @@ $("#logoDirIn").addEventListener("change", async e => {
   const rel = files[0].webkitRelativePath || "", dir = rel.split("/")[0];
   await uploadLogos(files, $("#logoName").value.trim() || dir);
 });
+async function renameFolder(from, to){
+  const list = st.logos.filter(l => logoFolder(l) === from);
+  let fail = 0;
+  for (const l of list){
+    const name = (to && to !== "Geral" ? to + "/" : "") + logoLabel(l);
+    const r = await SB.from("logos").update({ name }).eq("id", l.id).select("id");
+    if (r.error || !r.data.length) fail++;
+  }
+  await loadLogos();
+  ["#logoChips", "#logoTopChips", "#artLogoChips"].forEach(id => { const b = $(id); if (b && b.dataset.open === from) b.dataset.open = to; });
+  renderLogoChips(); renderArtLogoChips();
+  toast(fail ? "Algumas logos não foram renomeadas" : "Pasta renomeada para " + to);
+}
 async function moveLogo(l, folder){
   const name = (folder && folder !== "Geral" ? folder + "/" : "") + logoLabel(l);
   const r = await SB.from("logos").update({ name }).eq("id", l.id).select("id");
@@ -1846,8 +1860,27 @@ function renderLogoLib(){
   const folders = logoFolders();
   folders.forEach(([f, n]) => {
     const d = document.createElement("details"); d.className = "lfold"; if (folders.length === 1) d.open = true;
-    d.innerHTML = '<summary>' + FOLDER_SVG + '<b></b><span class="pill"></span></summary><div class="lgrid"></div>';
+    d.innerHTML = '<summary>' + FOLDER_SVG + '<b></b><span class="pill"></span><button class="btn small ren" type="button">✎ Renomear</button></summary><div class="lgrid"></div>';
     d.querySelector("b").textContent = f; d.querySelector(".pill").textContent = n;
+    const ren = d.querySelector(".ren"); if (!st.isAdmin) ren.hidden = true;
+    ren.addEventListener("click", ev => {
+      ev.preventDefault(); ev.stopPropagation();
+      const sum = d.querySelector("summary"), b = sum.querySelector("b");
+      if (sum.querySelector("input")) return;
+      const inp = document.createElement("input"); inp.className = "tin"; inp.value = f === "Geral" ? "" : f; inp.placeholder = "Nome da pasta";
+      inp.style.cssText = "flex:1;min-width:0;padding:6px 10px";
+      b.hidden = true; sum.insertBefore(inp, b); ren.textContent = "Salvar"; inp.focus(); inp.select();
+      ["click","keydown","keyup"].forEach(t => inp.addEventListener(t, e2 => { e2.stopPropagation(); if (t === "keyup" && e2.key === " ") e2.preventDefault(); }));
+      let done = false;
+      const finish = async ok => {
+        if (done) return; done = true;
+        const to = inp.value.replace(/\//g, "-").trim();
+        if (!ok || to === f || (!to && f === "Geral")){ renderLogoLib(); return; }
+        await renameFolder(f, to || "Geral");
+      };
+      inp.addEventListener("keydown", e2 => { if (e2.key === "Enter"){ e2.preventDefault(); finish(true); } else if (e2.key === "Escape") finish(false); });
+      ren.onclick = ev2 => { ev2.preventDefault(); ev2.stopPropagation(); finish(true); };
+    }, { once: true });
     const g = d.querySelector(".lgrid");
     st.logos.filter(l => logoFolder(l) === f).sort((a, b) => logoLabel(a).localeCompare(logoLabel(b), "pt-BR", { numeric: true })).forEach(l => {
       const it = document.createElement("div"); it.className = "lcard";
