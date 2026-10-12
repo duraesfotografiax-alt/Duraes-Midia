@@ -385,6 +385,14 @@ nav.top button{padding-left:2px;padding-right:2px;min-width:0}
 .lfold summary::-webkit-details-marker{display:none}
 .lfold summary svg{width:26px;height:26px;color:var(--accent)}
 .lfold summary b{flex:1}
+.lgtools{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.tog{display:inline-flex;align-items:center;gap:8px;border:1.5px solid var(--line);background:var(--panel2);color:var(--text);border-radius:999px;padding:6px 12px 6px 6px;font:inherit;font-weight:700;font-size:13px;cursor:pointer;flex:1 1 100%}
+.lgtools .btn.small{flex:1}
+.tog .knob{width:38px;height:22px;border-radius:99px;background:var(--line);position:relative;transition:.2s;flex:none}
+.tog .knob::after{content:"";position:absolute;top:3px;left:3px;width:16px;height:16px;border-radius:50%;background:#fff;transition:.2s;box-shadow:0 1px 3px #0003}
+.tog[aria-pressed="true"]{border-color:var(--accent)}
+.tog[aria-pressed="true"] .knob{background:var(--accent)}
+.tog[aria-pressed="true"] .knob::after{left:19px}
 .lfold summary .ren{padding:5px 10px;font-size:12px}
 .lgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px;padding:0 10px 10px}
 .lcard{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:8px;display:grid;gap:6px;min-width:0}
@@ -563,6 +571,12 @@ nav.top button{padding-left:2px;padding-right:2px;min-width:0}
       <div class="chips" id="logoChips"></div>
       <p class="muted" id="logoEmpty" style="margin-top:10px">As logos que o administrador sobe em Biblioteca aparecem aqui para toda a equipe.</p>
       <h3>Posição</h3>
+      <div class="lgtools">
+        <button class="tog" id="logoAllBtn" aria-pressed="false"><span class="knob"></span><span id="logoAllLbl">Só nesta logo</span></button>
+        <button class="btn small" id="logoUndo" disabled>↶ Desfazer</button>
+        <button class="btn small" id="logoRedo" disabled>↷ Refazer</button>
+      </div>
+      <p class="muted" id="logoAllInfo" style="margin:6px 0 8px">O tamanho muda só na logo escolhida.</p>
       <div class="box">
         <label class="sl">Tamanho <input type="range" id="logoSize" min="4" max="150" step="0.5" value="9"><span class="v" id="logoSizeV">9%</span></label>
         <label class="sl">Da borda <input type="range" id="logoBottom" min="-40" max="30" step="0.5" value="4.5"><span class="v" id="logoBottomV">4.5%</span></label>
@@ -1694,10 +1708,47 @@ function bindRange(id, fmt, fn){
   const el = $("#" + id), v = $("#" + id + "V");
   el.addEventListener("input", () => { v.textContent = fmt(+el.value); fn(+el.value); });
 }
-bindRange("logoSize", v => v + "%", v => { st.logoSize = v; draw(); saveLogoPos(); });
-bindRange("logoBottom", v => v + "%", v => { st.logoBottom = v; draw(); saveLogoPos(); });
-bindRange("logoTopSize", v => v + "%", v => { st.logoTopSize = v; draw(); saveLogoTopPos(); });
-bindRange("logoTopY", v => v + "%", v => { st.logoTopY = v; draw(); saveLogoTopPos(); });
+/* Aplicar em todas / desfazer / refazer */
+st.logoAll = !!LS.get("logoAll", false);
+const logoHist = { undo: [], redo: [], last: 0 };
+function logoState(){
+  return { logoId: st.logoId, logoSize: st.logoSize, logoBottom: st.logoBottom, logoTopId: st.logoTopId, logoTopSize: st.logoTopSize, logoTopY: st.logoTopY,
+    pos: JSON.stringify(LS.get("logoPos", {})), posTop: JSON.stringify(LS.get("logoPosTop", {})) };
+}
+function logoMark(){
+  const now = Date.now();
+  if (now - logoHist.last > 700){ logoHist.undo.push(logoState()); if (logoHist.undo.length > 30) logoHist.undo.shift(); logoHist.redo = []; }
+  logoHist.last = now; syncLogoHist();
+}
+function syncLogoHist(){ $("#logoUndo").disabled = !logoHist.undo.length; $("#logoRedo").disabled = !logoHist.redo.length; }
+function logoApplyState(sv){
+  const prevPos = LS.get("logoPos", {});
+  LS.set("logoPos", JSON.parse(sv.pos)); LS.set("logoPosTop", JSON.parse(sv.posTop));
+  st.logoId = sv.logoId; st.logoSize = sv.logoSize; st.logoBottom = sv.logoBottom;
+  st.logoTopId = sv.logoTopId; st.logoTopSize = sv.logoTopSize; st.logoTopY = sv.logoTopY;
+  setLogoSliders(); syncTopSliders(); renderLogoChips(); draw();
+  if (st.isAdmin && SB){ // devolve o tamanho salvo para a equipe nas logos que mudaram
+    const now = JSON.parse(sv.pos);
+    Object.keys(Object.assign({}, prevPos, now)).forEach(id => {
+      const a = prevPos[id], b = now[id];
+      if (b && (!a || a.size !== b.size || a.bottom !== b.bottom)) SB.from("logos").update({ size: b.size, bottom: b.bottom }).eq("id", id).then(() => { const l = st.logos.find(x => x.id === id); if (l){ l.size = b.size; l.bottom = b.bottom; } });
+    });
+  }
+}
+$("#logoUndo").addEventListener("click", () => { const sv = logoHist.undo.pop(); if (!sv) return; logoHist.redo.push(logoState()); logoApplyState(sv); logoHist.last = 0; syncLogoHist(); });
+$("#logoRedo").addEventListener("click", () => { const sv = logoHist.redo.pop(); if (!sv) return; logoHist.undo.push(logoState()); logoApplyState(sv); logoHist.last = 0; syncLogoHist(); });
+function syncLogoAll(){
+  const b = $("#logoAllBtn"); b.setAttribute("aria-pressed", st.logoAll);
+  const l = st.logos.find(x => x.id === st.logoId), f = l ? logoFolder(l) : "";
+  $("#logoAllLbl").textContent = st.logoAll ? "Aplicar em todas" : "Só nesta logo";
+  $("#logoAllInfo").textContent = st.logoAll ? "Ligado: o tamanho e a posição vão para todas as logos da pasta " + (f || "") + "." : "Desligado: o tamanho muda só na logo escolhida.";
+}
+$("#logoAllBtn").addEventListener("click", () => { st.logoAll = !st.logoAll; LS.set("logoAll", st.logoAll); syncLogoAll(); });
+syncLogoAll();
+bindRange("logoSize", v => v + "%", v => { logoMark(); st.logoSize = v; draw(); saveLogoPos(); });
+bindRange("logoBottom", v => v + "%", v => { logoMark(); st.logoBottom = v; draw(); saveLogoPos(); });
+bindRange("logoTopSize", v => v + "%", v => { logoMark(); st.logoTopSize = v; draw(); saveLogoTopPos(); });
+bindRange("logoTopY", v => v + "%", v => { logoMark(); st.logoTopY = v; draw(); saveLogoTopPos(); });
 /* Cada logo lembra o próprio tamanho e posição */
 function setLogoSliders(){
   $("#logoSize").value = st.logoSize; $("#logoSizeV").textContent = st.logoSize + "%";
@@ -1712,16 +1763,21 @@ function applyLogoPos(){
   setLogoSliders();
 }
 let logoPosTimer = 0;
+function logoTargets(id){
+  const l = st.logos.find(x => x.id === id);
+  if (!st.logoAll || !l) return [id];
+  const f = logoFolder(l); return st.logos.filter(x => logoFolder(x) === f).map(x => x.id);
+}
 function saveLogoPos(){
   const id = st.logoId; if (!id) return;
-  const all = LS.get("logoPos", {}); all[id] = { size: st.logoSize, bottom: st.logoBottom }; LS.set("logoPos", all);
+  const ids = logoTargets(id);
+  const all = LS.get("logoPos", {}); ids.forEach(k => { all[k] = { size: st.logoSize, bottom: st.logoBottom }; }); LS.set("logoPos", all);
   if (!st.isAdmin || !SB) return;
   clearTimeout(logoPosTimer);
   const size = st.logoSize, bottom = st.logoBottom;
   logoPosTimer = setTimeout(async () => {
-    const r = await SB.from("logos").update({ size, bottom }).eq("id", id).select("id");
-    const l = st.logos.find(x => x.id === id);
-    if (!r.error && r.data && r.data.length && l){ l.size = size; l.bottom = bottom; }
+    const r = await SB.from("logos").update({ size, bottom }).in("id", ids).select("id");
+    if (!r.error && r.data) r.data.forEach(x => { const l = st.logos.find(y => y.id === x.id); if (l){ l.size = size; l.bottom = bottom; } });
   }, 700);
 }
 function setLogos(list){
@@ -1775,9 +1831,10 @@ function logoPicker(box, get, set){
 }
 function renderLogoChips(){
   $("#logoEmpty").hidden = st.logos.length > 0;
-  logoPicker($("#logoChips"), () => st.logoId, id => { st.logoId = id; st._logoTouched = true; if (id) applyLogoPos(); draw(); });
-  logoPicker($("#logoTopChips"), () => st.logoTopId, id => { st.logoTopId = id; if (id) applyLogoTopPos(); syncTopSliders(); draw(); });
+  logoPicker($("#logoChips"), () => st.logoId, id => { if (id !== st.logoId) logoMark(); st.logoId = id; st._logoTouched = true; if (id) applyLogoPos(); draw(); });
+  logoPicker($("#logoTopChips"), () => st.logoTopId, id => { if (id !== st.logoTopId) logoMark(); st.logoTopId = id; if (id) applyLogoTopPos(); syncTopSliders(); draw(); });
   $("#logoTopBox").hidden = !st.logoTopId;
+  if (typeof syncLogoAll === "function" && $("#logoAllLbl")) syncLogoAll();
 }
 /* Marquinha no topo */
 st.logoTopId = null; st.logoTopSize = 8; st.logoTopY = 3;
@@ -1793,7 +1850,7 @@ function applyLogoTopPos(){
 }
 function saveLogoTopPos(){
   if (!st.logoTopId) return;
-  const all = LS.get("logoPosTop", {}); all[st.logoTopId] = { size: st.logoTopSize, top: st.logoTopY }; LS.set("logoPosTop", all);
+  const all = LS.get("logoPosTop", {}); logoTargets(st.logoTopId).forEach(k => { all[k] = { size: st.logoTopSize, top: st.logoTopY }; }); LS.set("logoPosTop", all);
 }
 function drawTopLogo(ctx, W, H){
   const im = st.logoTopId && logoImgs.get(st.logoTopId);
