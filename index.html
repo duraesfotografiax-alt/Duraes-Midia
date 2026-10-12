@@ -377,6 +377,21 @@ nav.top button{font-size:10.5px}
 nav.top{width:min(500px,calc(100% - 16px))}
 nav.top button{padding-left:2px;padding-right:2px;min-width:0}
 #v-poster .stage canvas{background:#e9e7e3}
+.chip.folder{color:var(--text)}
+.chip.folder svg{color:var(--accent)}
+.chip.back{border-style:dashed}
+.lfold{border:1.5px solid var(--line);border-radius:16px;margin-top:10px;background:var(--panel2)}
+.lfold summary{display:flex;align-items:center;gap:10px;padding:10px 12px;cursor:pointer;font-weight:800;list-style:none}
+.lfold summary::-webkit-details-marker{display:none}
+.lfold summary svg{width:26px;height:26px;color:var(--accent)}
+.lfold summary b{flex:1}
+.lgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px;padding:0 10px 10px}
+.lcard{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:8px;display:grid;gap:6px;min-width:0}
+.lcard img{width:100%;height:70px;object-fit:contain;background:repeating-conic-gradient(#8882 0 25%,transparent 0 50%) 0 0/12px 12px;border-radius:10px}
+.lcard .nm{font-weight:700;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.lcard .row{gap:4px}
+.lcard .btn.small{padding:5px 8px;font-size:12px}
+.lcard .mv{flex:1;min-width:0;border:1.5px solid var(--line);background:var(--panel2);border-radius:10px;padding:4px;font-size:12px}
 </style>
 </head>
 <body>
@@ -543,13 +558,19 @@ nav.top button{padding-left:2px;padding-right:2px;min-width:0}
     </div>
 
     <div class="pane" id="p-logo">
-      <h3>Marca d'água</h3>
+      <h3>Logo do rodapé</h3>
       <div class="chips" id="logoChips"></div>
       <p class="muted" id="logoEmpty" style="margin-top:10px">As logos que o administrador sobe em Biblioteca aparecem aqui para toda a equipe.</p>
       <h3>Posição</h3>
       <div class="box">
         <label class="sl">Tamanho <input type="range" id="logoSize" min="4" max="150" step="0.5" value="9"><span class="v" id="logoSizeV">9%</span></label>
         <label class="sl">Da borda <input type="range" id="logoBottom" min="-40" max="30" step="0.5" value="4.5"><span class="v" id="logoBottomV">4.5%</span></label>
+      </div>
+      <h3>Marquinha no topo</h3>
+      <div class="chips" id="logoTopChips"></div>
+      <div class="box" id="logoTopBox" style="margin-top:8px" hidden>
+        <label class="sl">Tamanho <input type="range" id="logoTopSize" min="2" max="60" step="0.5" value="8"><span class="v" id="logoTopSizeV">8%</span></label>
+        <label class="sl">Do topo <input type="range" id="logoTopY" min="-10" max="40" step="0.5" value="3"><span class="v" id="logoTopYV">3%</span></label>
       </div>
     </div>
 
@@ -760,11 +781,14 @@ nav.top button{padding-left:2px;padding-right:2px;min-width:0}
   </div>
   <div class="panel">
     <div class="ptitle"><span class="ic"><svg class="i"><use href="#i-stamp"/></svg></span><h2>Logos</h2></div>
-    <p class="lead">PNG com fundo transparente. Ficam salvas para toda a equipe.</p>
+    <p class="lead">PNG com fundo transparente, organizadas em pastas (Reunião, Caleb, EVG…). Ficam salvas para toda a equipe.</p>
+    <label class="field"><span>Pasta</span><input type="text" id="logoName" class="tin" list="logoFolders" placeholder="Ex.: Caleb (vazio = Geral)"></label>
+    <datalist id="logoFolders"></datalist>
     <div class="row">
-      <input type="text" id="logoName" class="tin" placeholder="Nome (ex.: Reunião, EVG, Caleb)" style="flex:1;min-width:180px">
-      <label class="btn primary filebtn"><svg class="i"><use href="#i-plus"/></svg>Subir logo<input id="logoIn" type="file" accept="image/*"></label>
+      <label class="btn primary filebtn wide"><svg class="i"><use href="#i-plus"/></svg>Subir logos<input id="logoIn" type="file" accept="image/*" multiple></label>
+      <label class="btn filebtn wide"><svg class="i"><use href="#i-lib"/></svg>Subir pasta inteira<input id="logoDirIn" type="file" webkitdirectory directory multiple></label>
     </div>
+    <p class="muted">No celular, escolha várias logos de uma vez. No computador, "Subir pasta inteira" usa o nome da pasta.</p>
     <div id="logoList"></div>
   </div>
 
@@ -1302,6 +1326,7 @@ function render(ctx, preview){
     const lw = W * st.logoSize / 100, lh = lw * (logo.naturalHeight || logo.height) / (logo.naturalWidth || logo.width);
     ctx.drawImage(logo, (W - lw) / 2, H - H * st.logoBottom / 100 - lh, lw, lh);
   }
+  drawTopLogo(ctx, W, H);
   drawText(ctx, W, H, st.tx);
   if (preview && cs[st.sel] && cs.length > 1){
     const c = cs[st.sel]; ctx.strokeStyle = "#2b7cff"; ctx.lineWidth = 8;
@@ -1664,26 +1689,14 @@ $("#curveDel").addEventListener("click", () => {
 
 /* ---------- Logo pane ---------- */
 function logoSrc(l){ return l.path ? pub(l.path) : l.data; }
-function renderLogoChips(){
-  const box = $("#logoChips"); box.innerHTML = "";
-  $("#logoEmpty").hidden = st.logos.length > 0;
-  const none = document.createElement("button"); none.className = "chip"; none.setAttribute("aria-pressed", !st.logoId);
-  none.innerHTML = '<svg width="44" height="44" aria-hidden="true"><circle cx="22" cy="22" r="16" fill="none" stroke="currentColor" stroke-width="2"/><path d="M11 33L33 11" stroke="currentColor" stroke-width="2"/></svg>Sem logo';
-  none.addEventListener("click", () => { st.logoId = null; renderLogoChips(); draw(); });
-  box.appendChild(none);
-  st.logos.forEach(l => {
-    const b = document.createElement("button"); b.className = "chip"; b.setAttribute("aria-pressed", st.logoId === l.id);
-    b.innerHTML = '<img alt=""><span></span>'; b.querySelector("img").src = logoSrc(l); b.querySelector("span").textContent = l.name;
-    b.addEventListener("click", () => { st.logoId = l.id; applyLogoPos(); renderLogoChips(); draw(); });
-    box.appendChild(b);
-  });
-}
 function bindRange(id, fmt, fn){
   const el = $("#" + id), v = $("#" + id + "V");
   el.addEventListener("input", () => { v.textContent = fmt(+el.value); fn(+el.value); });
 }
 bindRange("logoSize", v => v + "%", v => { st.logoSize = v; draw(); saveLogoPos(); });
 bindRange("logoBottom", v => v + "%", v => { st.logoBottom = v; draw(); saveLogoPos(); });
+bindRange("logoTopSize", v => v + "%", v => { st.logoTopSize = v; draw(); saveLogoTopPos(); });
+bindRange("logoTopY", v => v + "%", v => { st.logoTopY = v; draw(); saveLogoTopPos(); });
 /* Cada logo lembra o próprio tamanho e posição */
 function setLogoSliders(){
   $("#logoSize").value = st.logoSize; $("#logoSizeV").textContent = st.logoSize + "%";
@@ -1714,6 +1727,7 @@ function setLogos(list){
   st.logos = list;
   list.forEach(l => { if (!logoImgs.has(l.id)){ logoImgs.set(l.id, null); const im = new Image(); im.crossOrigin = "anonymous"; im.onload = () => { logoImgs.set(l.id, im); draw(); drawArt(); if (typeof renderLayers === "function") renderLayers(); }; im.src = logoSrc(l); } });
   if (st.logoId && !list.find(l => l.id === st.logoId)) st.logoId = null;
+  if (st.logoTopId && !list.find(l => l.id === st.logoTopId)) st.logoTopId = null;
   if (!st.logoId && !st._logoTouched){
     const def = list.find(l => l.id === st.cfg.defaultLogoId) || list[0];
     if (def){ st.logoId = def.id; applyLogoPos(); }
@@ -1721,42 +1735,147 @@ function setLogos(list){
   renderLogoChips(); renderLogoLib(); draw();
   if (typeof renderArtLogoChips === "function"){ renderArtLogoChips(); renderLayers(); }
 }
-$("#logoChips").addEventListener("click", () => { st._logoTouched = true; });
 
-/* ---------- Library: logos ---------- */
-function renderLogoLib(){
-  const box = $("#logoList"); box.innerHTML = "";
-  if (!st.logos.length){ box.innerHTML = '<div class="empty" style="margin-top:8px">Nenhuma logo salva ainda.</div>'; return; }
-  st.logos.forEach(l => {
-    const it = document.createElement("div"); it.className = "libitem";
-    it.innerHTML = '<img alt=""><div class="nm"></div><button class="btn small" data-a="def"></button><button class="btn small" data-a="del">Apagar</button>';
-    it.querySelector("img").src = logoSrc(l); it.querySelector(".nm").textContent = l.name;
-    const isDef = st.cfg.defaultLogoId === l.id;
-    const db = it.querySelector('[data-a="def"]'); db.textContent = isDef ? "Padrão" : "Tornar padrão"; db.disabled = isDef;
-    db.addEventListener("click", () => { st.cfg.defaultLogoId = l.id; saveCfg(); renderLogoLib(); toast("Logo padrão definida"); });
-    const del = it.querySelector('[data-a="del"]');
-    del.addEventListener("click", async () => {
-      if (!del.dataset.arm){ del.dataset.arm = 1; del.textContent = "Confirmar"; setTimeout(() => { delete del.dataset.arm; del.textContent = "Apagar"; }, 3000); return; }
-      await deleteLogo(l);
+
+/* ---------- Logos em pastas ---------- */
+const logoFolder = l => { const n = String(l.name || ""); const i = n.indexOf("/"); return i > 0 ? n.slice(0, i).trim() : "Geral"; };
+const logoLabel = l => { const n = String(l.name || ""); const i = n.indexOf("/"); return i > 0 ? n.slice(i + 1).trim() : n; };
+function logoFolders(){
+  const m = new Map();
+  st.logos.forEach(l => { const f = logoFolder(l); m.set(f, (m.get(f) || 0) + 1); });
+  return [...m.entries()].sort((a, b) => a[0] === "Geral" ? -1 : b[0] === "Geral" ? 1 : a[0].localeCompare(b[0], "pt-BR"));
+}
+const NONE_SVG = '<svg width="44" height="44" aria-hidden="true"><circle cx="22" cy="22" r="16" fill="none" stroke="currentColor" stroke-width="2"/><path d="M11 33L33 11" stroke="currentColor" stroke-width="2"/></svg>';
+const FOLDER_SVG = '<svg width="44" height="44" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M3 7a2 2 0 012-2h4l2 2.5h8a2 2 0 012 2V17a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg>';
+function logoPicker(box, get, set){
+  if (!box) return;
+  box.innerHTML = "";
+  const folders = logoFolders(), cur = get(), curL = st.logos.find(l => l.id === cur);
+  if (box.dataset.open === undefined && curL && folders.length > 1) box.dataset.open = logoFolder(curL);
+  const open = folders.length > 1 ? (box.dataset.open || "") : (folders[0] ? folders[0][0] : "");
+  const rerender = () => logoPicker(box, get, set);
+  const chip = (html, label, pressed, fn, cls) => {
+    const b = document.createElement("button"); b.className = "chip" + (cls ? " " + cls : ""); b.setAttribute("aria-pressed", !!pressed);
+    b.innerHTML = html; const sp = document.createElement("span"); sp.textContent = label; b.appendChild(sp);
+    b.addEventListener("click", fn); box.appendChild(b); return b;
+  };
+  if (!open){
+    chip(NONE_SVG, "Sem logo", !cur, () => { set(null); rerender(); });
+    folders.forEach(([f, n]) => chip(FOLDER_SVG, f + " (" + n + ")", curL && logoFolder(curL) === f, () => { box.dataset.open = f; rerender(); }, "folder"));
+    return;
+  }
+  if (folders.length > 1) chip('<svg width="44" height="44" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M15 5l-7 7 7 7"/></svg>', "Pastas", false, () => { box.dataset.open = ""; rerender(); }, "back");
+  else chip(NONE_SVG, "Sem logo", !cur, () => { set(null); rerender(); });
+  st.logos.filter(l => logoFolder(l) === open).sort((a, b) => logoLabel(a).localeCompare(logoLabel(b), "pt-BR", { numeric: true }))
+    .forEach(l => {
+      const b = chip('<img alt="">', logoLabel(l), cur === l.id, () => { set(l.id); rerender(); });
+      b.querySelector("img").src = logoSrc(l);
     });
-    if (!st.isAdmin){ db.hidden = true; del.hidden = true; }
-    box.appendChild(it);
-  });
+}
+function renderLogoChips(){
+  $("#logoEmpty").hidden = st.logos.length > 0;
+  logoPicker($("#logoChips"), () => st.logoId, id => { st.logoId = id; st._logoTouched = true; if (id) applyLogoPos(); draw(); });
+  logoPicker($("#logoTopChips"), () => st.logoTopId, id => { st.logoTopId = id; if (id) applyLogoTopPos(); syncTopSliders(); draw(); });
+  $("#logoTopBox").hidden = !st.logoTopId;
+}
+/* Marquinha no topo */
+st.logoTopId = null; st.logoTopSize = 8; st.logoTopY = 3;
+function syncTopSliders(){
+  $("#logoTopSize").value = st.logoTopSize; $("#logoTopSizeV").textContent = st.logoTopSize + "%";
+  $("#logoTopY").value = st.logoTopY; $("#logoTopYV").textContent = st.logoTopY + "%";
+  $("#logoTopBox").hidden = !st.logoTopId;
+}
+function applyLogoTopPos(){
+  const p = LS.get("logoPosTop", {})[st.logoTopId];
+  if (p){ st.logoTopSize = p.size; st.logoTopY = p.top; }
+  syncTopSliders();
+}
+function saveLogoTopPos(){
+  if (!st.logoTopId) return;
+  const all = LS.get("logoPosTop", {}); all[st.logoTopId] = { size: st.logoTopSize, top: st.logoTopY }; LS.set("logoPosTop", all);
+}
+function drawTopLogo(ctx, W, H){
+  const im = st.logoTopId && logoImgs.get(st.logoTopId);
+  if (!im || !(im.naturalWidth || im.width)) return;
+  const lw = W * st.logoTopSize / 100, lh = lw * (im.naturalHeight || im.height) / (im.naturalWidth || im.width);
+  ctx.drawImage(im, (W - lw) / 2, H * st.logoTopY / 100, lw, lh);
+}
+
+/* Biblioteca: subir várias logos / pasta inteira */
+async function uploadLogos(files, folder){
+  files = [...files].filter(f => /^image\//.test(f.type) || /\.(png|webp|svg|jpe?g)$/i.test(f.name));
+  if (!files.length) return toast("Nenhuma imagem encontrada");
+  folder = (folder || "").replace(/\//g, "-").trim();
+  let ok = 0, fail = 0;
+  for (const f of files){
+    toast("Enviando " + (ok + fail + 1) + " de " + files.length + "…", 8000);
+    try{
+      const base = f.name.replace(/\.[^.]+$/, "").replace(/\//g, "-");
+      const name = folder ? folder + "/" + base : base;
+      const ext = (f.name.split(".").pop() || "png").toLowerCase().replace(/[^a-z0-9]/g, "") || "png";
+      const path = "logos/" + uid() + Date.now().toString(36) + "." + ext;
+      const up = await SB.storage.from(BUCKET).upload(path, f, { contentType: f.type || "image/png" });
+      if (up.error) throw up.error;
+      const ins = await SB.from("logos").insert({ name, path });
+      if (ins.error){ await SB.storage.from(BUCKET).remove([path]); throw ins.error; }
+      ok++;
+    }catch(e){ fail++; }
+  }
+  await loadLogos();
+  toast(ok + " logo(s) salvas" + (folder ? " na pasta " + folder : "") + (fail ? ". " + fail + " não foram." : ""), 3800);
 }
 $("#logoIn").addEventListener("change", async e => {
-  const f = e.target.files[0]; e.target.value = ""; if (!f) return;
-  const name = $("#logoName").value.trim() || f.name.replace(/\.[^.]+$/, "");
-  try{
-    const ext = (f.name.split(".").pop() || "png").toLowerCase().replace(/[^a-z0-9]/g, "") || "png";
-    const path = "logos/" + uid() + Date.now().toString(36) + "." + ext;
-    const up = await SB.storage.from(BUCKET).upload(path, f, { contentType: f.type || "image/png" });
-    if (up.error) throw up.error;
-    const ins = await SB.from("logos").insert({ name, path });
-    if (ins.error){ await SB.storage.from(BUCKET).remove([path]); throw ins.error; }
-    await loadLogos();
-    $("#logoName").value = ""; toast("Logo salva: " + name);
-  }catch(err){ toast("Não deu para salvar a logo" + errHint(err), 3800); }
+  const files = [...e.target.files]; e.target.value = ""; if (!files.length) return;
+  await uploadLogos(files, $("#logoName").value.trim());
 });
+$("#logoDirIn").addEventListener("change", async e => {
+  const files = [...e.target.files]; e.target.value = ""; if (!files.length) return;
+  const rel = files[0].webkitRelativePath || "", dir = rel.split("/")[0];
+  await uploadLogos(files, $("#logoName").value.trim() || dir);
+});
+async function moveLogo(l, folder){
+  const name = (folder && folder !== "Geral" ? folder + "/" : "") + logoLabel(l);
+  const r = await SB.from("logos").update({ name }).eq("id", l.id).select("id");
+  if (r.error || !r.data.length) return toast("Não deu para mover" + errHint(r.error));
+  await loadLogos(); toast("Movida para " + (folder || "Geral"));
+}
+function renderLogoLib(){
+  const box = $("#logoList"); box.innerHTML = "";
+  const dl = $("#logoFolders"); if (dl){ dl.innerHTML = ""; logoFolders().forEach(([f]) => { const o = document.createElement("option"); o.value = f; dl.appendChild(o); }); }
+  if (!st.logos.length){ box.innerHTML = '<div class="empty" style="margin-top:8px">Nenhuma logo salva ainda.</div>'; return; }
+  const folders = logoFolders();
+  folders.forEach(([f, n]) => {
+    const d = document.createElement("details"); d.className = "lfold"; if (folders.length === 1) d.open = true;
+    d.innerHTML = '<summary>' + FOLDER_SVG + '<b></b><span class="pill"></span></summary><div class="lgrid"></div>';
+    d.querySelector("b").textContent = f; d.querySelector(".pill").textContent = n;
+    const g = d.querySelector(".lgrid");
+    st.logos.filter(l => logoFolder(l) === f).sort((a, b) => logoLabel(a).localeCompare(logoLabel(b), "pt-BR", { numeric: true })).forEach(l => {
+      const it = document.createElement("div"); it.className = "lcard";
+      it.innerHTML = '<img alt=""><div class="nm"></div><div class="row"><button class="btn small" data-a="def"></button><select class="mv" aria-label="Mover para pasta"></select><button class="btn small" data-a="del">Apagar</button></div>';
+      it.querySelector("img").src = logoSrc(l); it.querySelector(".nm").textContent = logoLabel(l);
+      const isDef = st.cfg.defaultLogoId === l.id;
+      const db = it.querySelector('[data-a="def"]'); db.textContent = isDef ? "★ Padrão" : "Padrão"; db.disabled = isDef;
+      db.addEventListener("click", () => { st.cfg.defaultLogoId = l.id; saveCfg(); renderLogoLib(); toast("Logo padrão definida"); });
+      const mv = it.querySelector(".mv");
+      mv.innerHTML = '<option value="">Mover…</option>' + folders.filter(([x]) => x !== f).map(([x]) => '<option></option>').join("") + '<option value="__nova">Nova pasta…</option>';
+      [...mv.options].slice(1, -1).forEach((o, k) => { const x = folders.filter(([y]) => y !== f)[k][0]; o.value = x; o.textContent = x; });
+      mv.addEventListener("change", async () => {
+        let to = mv.value; if (!to) return;
+        if (to === "__nova"){ to = (prompt("Nome da nova pasta (ex.: Caleb)") || "").trim(); if (!to){ mv.value = ""; return; } }
+        await moveLogo(l, to);
+      });
+      const del = it.querySelector('[data-a="del"]');
+      del.addEventListener("click", async () => {
+        if (!del.dataset.arm){ del.dataset.arm = 1; del.textContent = "Confirmar"; setTimeout(() => { delete del.dataset.arm; del.textContent = "Apagar"; }, 3000); return; }
+        await deleteLogo(l);
+      });
+      if (!st.isAdmin){ db.hidden = true; del.hidden = true; mv.hidden = true; }
+      g.appendChild(it);
+    });
+    box.appendChild(d);
+  });
+}
+
 async function deleteLogo(l){
   try{
     const r = await SB.from("logos").delete().eq("id", l.id);
@@ -2398,18 +2517,9 @@ function drawArtLogo(ctx, W, H, preview){
 }
 function syncArtLogo(){ const el = $("#artLogoSize"); if (el){ el.value = Math.round(art.lg.s); $("#artLogoSizeV").textContent = Math.round(art.lg.s) + "%"; } }
 function renderArtLogoChips(){
-  const box = $("#artLogoChips"); if (!box) return; box.innerHTML = "";
+  const box = $("#artLogoChips"); if (!box) return;
   if (art.logoId && st.logos.length && !st.logos.find(l => l.id === art.logoId)) art.logoId = null;
-  const none = document.createElement("button"); none.className = "chip"; none.setAttribute("aria-pressed", !art.logoId);
-  none.innerHTML = '<svg width="44" height="44" aria-hidden="true"><circle cx="22" cy="22" r="16" fill="none" stroke="currentColor" stroke-width="2"/><path d="M11 33L33 11" stroke="currentColor" stroke-width="2"/></svg>Sem logo';
-  none.addEventListener("click", () => { art.logoId = null; saveArtPref(); renderArtLogoChips(); renderLayers(); drawArt(); });
-  box.appendChild(none);
-  st.logos.forEach(l => {
-    const b = document.createElement("button"); b.className = "chip"; b.setAttribute("aria-pressed", art.logoId === l.id);
-    b.innerHTML = '<img alt=""><span></span>'; b.querySelector("img").src = logoSrc(l); b.querySelector("span").textContent = l.name;
-    b.addEventListener("click", () => { art.logoId = l.id; art.layer = "logo"; saveArtPref(); renderArtLogoChips(); renderLayers(); drawArt(); });
-    box.appendChild(b);
-  });
+  logoPicker(box, () => art.logoId, id => { art.logoId = id; if (id) art.layer = "logo"; saveArtPref(); renderLayers(); drawArt(); });
   syncArtLogo();
 }
 function drawArt(){
@@ -2453,12 +2563,13 @@ function canShareFiles(){
 const PB = "prontas";
 const done = { items: [], editing: null, snaps: new Map(Object.entries(LS.get("snaps", {}) || {})), range: "hoje", mine: false };
 function snapshot(){
-  return { fmtId: st.fmt.id, layoutId: st.layoutId, gap: st.gap, logoId: st.logoId, logoSize: st.logoSize, logoBottom: st.logoBottom,
+  return { fmtId: st.fmt.id, layoutId: st.layoutId, gap: st.gap, logoId: st.logoId, logoSize: st.logoSize, logoBottom: st.logoBottom, logoTopId: st.logoTopId, logoTopSize: st.logoTopSize, logoTopY: st.logoTopY,
     slots: st.slots.map(s => { const ph = s.photoId && st.photos.find(p => p.id === s.photoId); return Object.assign({}, s, ph ? { adj: JSON.parse(JSON.stringify(ph.adj)) } : {}); }), tx: Object.assign({}, st.tx) };
 }
 function restore(sn){
   st.fmt = FORMATS.find(f => f.id === sn.fmtId) || FORMATS[0];
   st.layoutId = sn.layoutId; st.gap = sn.gap; st.logoId = sn.logoId; st.logoSize = sn.logoSize; st.logoBottom = sn.logoBottom; st._logoTouched = true;
+  st.logoTopId = sn.logoTopId || null; if (sn.logoTopSize) st.logoTopSize = sn.logoTopSize; if (sn.logoTopY != null) st.logoTopY = sn.logoTopY; syncTopSliders();
   st.slots = sn.slots.map(s => {
     const ph = st.photos.find(p => p.id === s.photoId);
     if (ph && s.adj) ph.adj = Object.assign(defaultAdj(), JSON.parse(JSON.stringify(s.adj)));
