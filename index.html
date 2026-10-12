@@ -221,8 +221,10 @@ input[type=range]:disabled{opacity:.4}
 .prow input{width:100%;min-width:0;border:1.5px solid var(--line);background:var(--panel);border-radius:10px;padding:8px 10px;font-size:14px}
 @media (max-width:899px){
   .stage canvas{max-height:56vh;width:auto;max-width:100%;margin:0 auto}
-  #v-mont .stage,#v-arte .stage{position:sticky;top:0;z-index:6;padding:8px;margin:0 -6px;box-shadow:0 10px 24px rgba(0,0,0,.18)}
+  #v-mont .stage,#v-arte .stage,#v-poster .stage{position:sticky;top:0;z-index:6;padding:8px;margin:0 -6px;box-shadow:0 10px 24px rgba(0,0,0,.18)}
   #v-mont .stage canvas{max-height:40vh}
+  #v-poster .stage canvas{max-height:36vh}
+  #v-poster .stage .hint{margin-top:6px;font-size:12.5px;font-weight:700;justify-content:center}
   #v-arte .stage canvas{max-height:34vh}
   .erasebar .btn.small{padding:6px 9px;font-size:12.5px}
   #v-mont .stage .hint{display:none}
@@ -3109,7 +3111,7 @@ function renderPoster(){
     ctx.fillStyle = "#fff"; ctx.fillText(lb, x + w / 2, y + h / 2);
   }
   const cm = v => (v / 10).toFixed(v < 1000 ? 1 : 0).replace(".", ",");
-  $("#pzSum").textContent = L.pages + " folhas " + pz.paper.replace("Oficio", "Ofício") + " " + (L.ori === "deitada" ? "deitadas" : "em pé") + " (" + L.cols + " × " + L.rows + ")";
+  $("#pzSum").textContent = L.pages + " folhas " + pz.paper.replace("Oficio", "Ofício") + " " + (L.ori === "deitada" ? "deitadas" : "em pé") + " (" + L.cols + " × " + L.rows + ") • " + cm(L.W) + " × " + cm(L.H) + " cm";
   $("#pzSize").textContent = "Pôster montado: " + cm(L.W) + " × " + cm(L.H) + " cm";
   const dpi = pz.img.width / (L.W / 25.4);
   $("#pzQual").textContent = "Qualidade da impressão: " + (dpi >= 150 ? "ótima" : dpi >= 90 ? "boa" : dpi >= 50 ? "razoável, pode ficar um pouco borrado de perto" : "baixa, a imagem é pequena para esse tamanho") + " (" + Math.round(dpi) + " dpi)";
