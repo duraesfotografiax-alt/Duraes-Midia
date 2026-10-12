@@ -372,6 +372,9 @@ nav.top button{font-size:10.5px}
 .vact{display:flex;gap:8px;justify-content:center}
 .vact .btn{flex:1;max-width:160px}
 .viewer .btn:not(.primary){background:rgba(255,255,255,.12);color:#fff;border-color:transparent}
+nav.top{width:min(500px,calc(100% - 16px))}
+nav.top button{padding-left:2px;padding-right:2px;min-width:0}
+#v-poster .stage canvas{background:#e9e7e3}
 </style>
 </head>
 <body>
@@ -391,6 +394,7 @@ nav.top button{font-size:10.5px}
   <symbol id="i-pin" viewBox="0 0 24 24"><path d="M12 21s7-6 7-11a7 7 0 10-14 0c0 5 7 11 7 11z"/><circle cx="12" cy="10" r="2.5"/></symbol>
   <symbol id="i-zip" viewBox="0 0 24 24"><path d="M6 3h9l4 4v14H6z"/><path d="M11 3v2h2v2h-2v2h2v2h-2v3"/></symbol>
   <symbol id="i-cal" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M3 10h18M8 3v4M16 3v4M8 15l2.5 2.5L16 13"/></symbol>
+  <symbol id="i-poster" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 3v18M15 3v18M3 9h18M3 15h18"/></symbol>
   <symbol id="i-trash" viewBox="0 0 24 24"><path d="M4 7h16M10 7V4h4v3M6 7l1 13h10l1-13"/></symbol>
 </svg>
 
@@ -437,9 +441,10 @@ nav.top button{font-size:10.5px}
 
 <nav class="top" role="tablist" aria-label="Seções">
   <button role="tab" data-view="mont" aria-selected="true"><svg class="i"><use href="#i-grid"/></svg>Montar</button>
-  <button role="tab" data-view="arte" aria-selected="false"><svg class="i"><use href="#i-art"/></svg>Arte do dia</button>
+  <button role="tab" data-view="arte" aria-selected="false"><svg class="i"><use href="#i-art"/></svg>Arte</button>
   <button role="tab" data-view="done" aria-selected="false" id="doneTab"><svg class="i"><use href="#i-stack"/></svg>Prontas<span class="badge" id="doneBadge" hidden>0</span></button>
   <button role="tab" data-view="fluxo" aria-selected="false" id="fluxoTab" hidden><svg class="i"><use href="#i-cal"/></svg>Fluxo<span class="badge" id="fluxoBadge" hidden>0</span></button>
+  <button role="tab" data-view="poster" aria-selected="false"><svg class="i"><use href="#i-poster"/></svg>Pôster</button>
   <button role="tab" data-view="lib" aria-selected="false"><svg class="i"><use href="#i-lib"/></svg>Biblioteca</button>
 </nav>
 
@@ -695,6 +700,45 @@ nav.top button{font-size:10.5px}
 
   <div class="fx-bell" id="fNotif"></div>
   <button class="link2" id="fToday" hidden>Voltar para hoje</button>
+</section>
+
+<!-- PÔSTER -->
+<section class="view split" id="v-poster">
+  <div class="stage">
+    <canvas id="pzPv" width="900" height="1200" aria-label="Prévia do pôster dividido em folhas"></canvas>
+    <p class="hint" id="pzSum"></p>
+  </div>
+  <div class="panel">
+    <div class="ptitle"><span class="ic"><svg class="i"><use href="#i-poster"/></svg></span><h2>Pôster em folhas</h2></div>
+    <p class="lead">Escolha uma imagem e o tamanho. O app divide em várias folhas e gera um PDF pronto para imprimir e montar.</p>
+    <div class="row">
+      <label class="btn primary filebtn wide"><svg class="i"><use href="#i-plus"/></svg>Escolher imagem<input id="pzIn" type="file" accept="image/*"></label>
+      <button class="btn wide" id="pzPronta">Usar uma Pronta</button>
+    </div>
+    <div class="fpick" id="pzPick" hidden></div>
+
+    <h3>Papel</h3>
+    <div class="chips" id="pzPaper"></div>
+    <h3>Folha</h3>
+    <div class="chips" id="pzOri"></div>
+
+    <h3>Tamanho do pôster</h3>
+    <div class="box">
+      <label class="sl">Folhas na largura <input type="range" id="pzCols" min="1" max="10" step="1" value="3"><span class="v" id="pzColsV">3</span></label>
+    </div>
+    <p class="muted" id="pzSize" style="margin:6px 2px 0"></p>
+
+    <h3>Montagem</h3>
+    <div class="box">
+      <label class="sl">Margem branca <input type="range" id="pzMargin" min="0" max="15" step="1" value="6"><span class="v" id="pzMarginV">6 mm</span></label>
+      <label class="sl">Sobreposição <input type="range" id="pzOver" min="0" max="20" step="1" value="8"><span class="v" id="pzOverV">8 mm</span></label>
+    </div>
+    <div class="chips small" id="pzOpts" style="margin-top:8px"></div>
+    <p class="muted">A sobreposição repete um pedacinho da imagem entre as folhas, pra colar uma por cima da outra sem aparecer emenda.</p>
+
+    <button class="btn primary big" id="pzGo" style="width:100%;margin-top:12px"><svg class="i"><use href="#i-dl"/></svg>Gerar PDF para imprimir</button>
+    <p class="muted" id="pzQual" style="margin-top:8px"></p>
+  </div>
 </section>
 
 <!-- BIBLIOTECA -->
@@ -2684,7 +2728,8 @@ $$("nav.top button").forEach(b => b.addEventListener("click", () => {
   $$("nav.top button").forEach(x => x.setAttribute("aria-selected", x === b));
   $$(".view").forEach(v => v.classList.toggle("on", v.id === "v-" + b.dataset.view));
   const v = b.dataset.view;
-  $("#dlBar").hidden = v === "lib" || v === "done" || v === "fluxo";
+  $("#dlBar").hidden = v === "lib" || v === "done" || v === "fluxo" || v === "poster";
+  if (v === "poster"){ renderPosterChips(); renderPoster(); }
   if (v === "fluxo"){ loadFluxo(); renderNotif(); }
   showLink();
   if (v === "done"){ renderDoneFilter(); loadDone(); }
@@ -3017,6 +3062,151 @@ function setFluxoAccess(on){
   loadFluxo(true); renderNotif();
   if (/[?&]aba=fluxo/.test(location.search)){ $('nav.top [data-view="fluxo"]').click(); history.replaceState(null, "", location.pathname); }
 }
+
+/* ---------- Pôster em folhas ---------- */
+const PZ_PAPERS = { A4: [210, 297], A3: [297, 420], Oficio: [216, 330] };
+const pz = { img: null, name: "poster", paper: LS.get("pzPaper", "A4"), ori: LS.get("pzOri", "auto"), cols: 3, margin: 6, over: 8, marks: true, labels: true };
+async function pzLoadFile(file){
+  const im = await decodeFile(file);
+  const w = im.naturalWidth || im.width, h = im.naturalHeight || im.height, s = Math.min(1, 7000 / Math.max(w, h));
+  const c = document.createElement("canvas"); c.width = Math.round(w * s); c.height = Math.round(h * s);
+  c.getContext("2d").drawImage(im, 0, 0, c.width, c.height);
+  return c;
+}
+function pzLayout(ori){
+  if (!pz.img) return null;
+  let [pw, ph] = PZ_PAPERS[pz.paper];
+  if (ori === "deitada") [pw, ph] = [ph, pw];
+  const m = pz.margin, ov = Math.min(pz.over, 40), aw = pw - 2 * m, ah = ph - 2 * m;
+  const W = pz.cols * aw - (pz.cols - 1) * ov, H = W * pz.img.height / pz.img.width;
+  const rows = Math.max(1, Math.ceil((H - ov) / (ah - ov) - 1e-6));
+  return { pw, ph, m, ov, aw, ah, W, H, cols: pz.cols, rows, pages: pz.cols * rows, ori };
+}
+function pzBest(){
+  if (pz.ori !== "auto") return pzLayout(pz.ori);
+  const a = pzLayout("em pé"), b = pzLayout("deitada");
+  return a && b && b.pages < a.pages ? b : a;
+}
+function renderPoster(){
+  const cv = $("#pzPv"), ctx = cv.getContext("2d"), L = pzBest();
+  if (!L){
+    cv.width = 900; cv.height = 1200; ctx.fillStyle = "#1b1b1e"; ctx.fillRect(0, 0, cv.width, cv.height);
+    ctx.fillStyle = "rgba(255,255,255,.5)"; ctx.font = "700 40px Archivo, sans-serif"; ctx.textAlign = "center"; ctx.fillText("Escolha a imagem do pôster", 450, 600);
+    $("#pzSum").textContent = ""; $("#pzSize").textContent = ""; $("#pzQual").textContent = ""; return;
+  }
+  const gw = L.cols * L.aw - (L.cols - 1) * L.ov, gh = L.rows * L.ah - (L.rows - 1) * L.ov;
+  const sc = Math.min(900 / gw, 1200 / gh);
+  cv.width = Math.round(gw * sc); cv.height = Math.round(gh * sc);
+  ctx.fillStyle = "#ffffff"; ctx.fillRect(0, 0, cv.width, cv.height);
+  ctx.drawImage(pz.img, 0, 0, L.W * sc, L.H * sc);
+  ctx.lineWidth = 2; ctx.font = "800 " + Math.max(14, Math.round(Math.min(L.aw, L.ah) * sc / 7)) + "px Archivo, sans-serif"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+  for (let r = 0; r < L.rows; r++) for (let c = 0; c < L.cols; c++){
+    const x = c * (L.aw - L.ov) * sc, y = r * (L.ah - L.ov) * sc, w = L.aw * sc, h = L.ah * sc;
+    ctx.fillStyle = (r + c) % 2 ? "rgba(235,91,2,.10)" : "rgba(43,124,255,.10)"; ctx.fillRect(x, y, w, h);
+    ctx.strokeStyle = "rgba(235,91,2,.95)"; ctx.setLineDash([10, 6]); ctx.strokeRect(x + 1, y + 1, w - 2, h - 2); ctx.setLineDash([]);
+    const lb = String.fromCharCode(65 + r) + (c + 1);
+    ctx.fillStyle = "rgba(0,0,0,.55)"; ctx.beginPath(); ctx.arc(x + w / 2, y + h / 2, Math.min(w, h) * .16, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = "#fff"; ctx.fillText(lb, x + w / 2, y + h / 2);
+  }
+  const cm = v => (v / 10).toFixed(v < 1000 ? 1 : 0).replace(".", ",");
+  $("#pzSum").textContent = L.pages + " folhas " + pz.paper.replace("Oficio", "Ofício") + " " + (L.ori === "deitada" ? "deitadas" : "em pé") + " (" + L.cols + " × " + L.rows + ")";
+  $("#pzSize").textContent = "Pôster montado: " + cm(L.W) + " × " + cm(L.H) + " cm";
+  const dpi = pz.img.width / (L.W / 25.4);
+  $("#pzQual").textContent = "Qualidade da impressão: " + (dpi >= 150 ? "ótima" : dpi >= 90 ? "boa" : dpi >= 50 ? "razoável, pode ficar um pouco borrado de perto" : "baixa, a imagem é pequena para esse tamanho") + " (" + Math.round(dpi) + " dpi)";
+}
+function renderPosterChips(){
+  chipGroup($("#pzPaper"), [["A4", "A4"], ["A3", "A3"], ["Oficio", "Ofício"]], () => pz.paper, v => { pz.paper = v; LS.set("pzPaper", v); }, renderPoster);
+  chipGroup($("#pzOri"), [["auto", "Automático"], ["em pé", "Em pé"], ["deitada", "Deitada"]], () => pz.ori, v => { pz.ori = v; LS.set("pzOri", v); }, renderPoster);
+  const box = $("#pzOpts"); box.innerHTML = "";
+  [["marks", "Marcas de corte"], ["labels", "Número em cada folha"]].forEach(([k, n]) => {
+    const b = document.createElement("button"); b.className = "chip txt"; b.setAttribute("aria-pressed", pz[k]); b.textContent = n;
+    b.addEventListener("click", () => { pz[k] = !pz[k]; renderPosterChips(); });
+    box.appendChild(b);
+  });
+}
+bindRange("pzCols", v => v, v => { pz.cols = v; renderPoster(); });
+bindRange("pzMargin", v => v + " mm", v => { pz.margin = v; renderPoster(); });
+bindRange("pzOver", v => v + " mm", v => { pz.over = v; renderPoster(); });
+$("#pzIn").addEventListener("change", async e => {
+  const f = e.target.files[0]; e.target.value = ""; if (!f) return;
+  try{ toast("Abrindo imagem…"); pz.img = await pzLoadFile(f); pz.name = (f.name || "poster").replace(/\.[^.]+$/, ""); $("#pzPick").hidden = true; renderPoster(); }
+  catch(err){ toast("Não deu para abrir essa imagem"); }
+});
+$("#pzPronta").addEventListener("click", async () => {
+  const g = $("#pzPick");
+  if (!g.hidden){ g.hidden = true; return; }
+  if (!SB || !st.me) return toast("Entre na sua conta primeiro");
+  g.hidden = false; g.innerHTML = '<p class="muted">Carregando…</p>';
+  const r = await SB.from("prontas").select("id,path,created_at").order("created_at", { ascending: false }).limit(40);
+  if (r.error || !r.data.length){ g.innerHTML = '<p class="muted">Nenhuma pronta ainda.</p>'; return; }
+  const s = await SB.storage.from(PB).createSignedUrls(r.data.map(x => x.path), 3600);
+  const byPath = new Map((s.data || []).map(u => [u.path, u.signedUrl]));
+  g.innerHTML = "";
+  r.data.forEach(x => {
+    const b = document.createElement("button"); b.innerHTML = '<img alt="" loading="lazy">'; b.querySelector("img").src = byPath.get(x.path) || "";
+    b.addEventListener("click", async () => {
+      try{ const d = await SB.storage.from(PB).download(x.path); if (d.error) throw d.error;
+        pz.img = await pzLoadFile(d.data); pz.name = "poster-pronta"; g.hidden = true; renderPoster(); }
+      catch(e){ toast("Não deu para abrir essa pronta"); }
+    });
+    g.appendChild(b);
+  });
+});
+let jsPdfLoad = null;
+function loadJsPdf(){
+  if (window.jspdf) return Promise.resolve();
+  if (!jsPdfLoad) jsPdfLoad = new Promise((res, rej) => {
+    const s = document.createElement("script"); s.src = "https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js";
+    s.onload = res; s.onerror = () => { jsPdfLoad = null; rej(new Error("Sem internet para gerar o PDF")); }; document.head.appendChild(s);
+  });
+  return jsPdfLoad;
+}
+async function buildPosterPdf(){
+  const L = pzBest(); if (!L) throw new Error("Escolha a imagem primeiro");
+  await loadJsPdf();
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ orientation: L.ori === "deitada" ? "landscape" : "portrait", unit: "mm", format: [Math.min(L.pw, L.ph), Math.max(L.pw, L.ph)] });
+  const pxmm = pz.img.width / L.W, ppm = Math.min(pxmm, 8);
+  const tile = document.createElement("canvas"), tc = tile.getContext("2d");
+  tile.width = Math.round(L.aw * ppm); tile.height = Math.round(L.ah * ppm);
+  let first = true;
+  for (let r = 0; r < L.rows; r++) for (let c = 0; c < L.cols; c++){
+    if (!first) doc.addPage(); first = false;
+    const x0 = c * (L.aw - L.ov), y0 = r * (L.ah - L.ov);
+    tc.fillStyle = "#ffffff"; tc.fillRect(0, 0, tile.width, tile.height);
+    tc.imageSmoothingQuality = "high";
+    tc.drawImage(pz.img, x0 * pxmm, y0 * pxmm, L.aw * pxmm, L.ah * pxmm, 0, 0, tile.width, tile.height);
+    doc.addImage(tile.toDataURL("image/jpeg", .92), "JPEG", L.m, L.m, L.aw, L.ah, undefined, "FAST");
+    if (pz.marks && L.m >= 3){
+      doc.setDrawColor(120); doc.setLineWidth(.2);
+      const k = Math.min(L.m - 1, 5), X = [L.m, L.m + L.aw], Y = [L.m, L.m + L.ah];
+      X.forEach(x => Y.forEach(y => {
+        doc.line(x, y < L.ph / 2 ? y - k : y + 1, x, y < L.ph / 2 ? y - 1 : y + k);
+        doc.line(x < L.pw / 2 ? x - k : x + 1, y, x < L.pw / 2 ? x - 1 : x + k, y);
+      }));
+    }
+    if (pz.labels && L.m >= 3){
+      doc.setFontSize(7); doc.setTextColor(110);
+      doc.text("Folha " + String.fromCharCode(65 + r) + (c + 1) + "  (linha " + (r + 1) + ", coluna " + (c + 1) + " de " + L.rows + "×" + L.cols + ")", L.m, L.ph - Math.max(1, L.m / 2 - 1));
+    }
+  }
+  return doc.output("blob");
+}
+$("#pzGo").addEventListener("click", async () => {
+  if (!pz.img) return toast("Escolha a imagem primeiro");
+  const btn = $("#pzGo"); btn.disabled = true; const old = btn.innerHTML; btn.textContent = "Gerando PDF…";
+  try{
+    const blob = await buildPosterPdf(), L = pzBest();
+    const name = (pz.name || "poster") + "-" + L.cols + "x" + L.rows + "-" + pz.paper + ".pdf";
+    const f = new File([blob], name, { type: "application/pdf" });
+    if (navigator.canShare && navigator.canShare({ files: [f] }) && /Android|iPhone|iPad/i.test(navigator.userAgent)){
+      try{ await navigator.share({ files: [f] }); }catch(e){ if (e && e.name !== "AbortError") await saveFile(name, blob); }
+    } else await saveFile(name, blob);
+    toast("PDF pronto: " + L.pages + " folhas ✅", 3200);
+  }catch(e){ toast("Não deu para gerar o PDF" + errHint(e), 3800); }
+  finally{ btn.disabled = false; btn.innerHTML = old; }
+});
+window.__buildPosterPdf = buildPosterPdf;
 
 /* ---------- Init ---------- */
 buildSliders(); renderFormats(); renderLayoutChips(); renderTray(); renderLyEditor(); syncAdjUI(); syncTxUI();
