@@ -238,6 +238,9 @@ input[type=range]:disabled{opacity:.4}
 .layers button:disabled{opacity:.4}
 .erasebar{margin-top:8px;padding:6px 10px;border-radius:14px;background:var(--panel2)}
 .erasebar .row{margin-top:4px}
+#eraseMBar .row{flex-wrap:nowrap;gap:5px}
+#eraseMBar .row .btn{flex:1 1 auto;padding:6px 8px;font-size:12.5px;white-space:nowrap}
+#eraseMBar .row .btn.primary{flex:2 1 auto}
 .prow .cp{grid-column:2;justify-self:end;padding:4px 10px}
 .erow{display:grid;gap:6px;padding:10px 0;border-top:1px solid var(--line)}
 .erow input,.erow select{width:100%;min-width:0;border:1.5px solid var(--line);background:var(--panel);border-radius:10px;padding:8px 10px;font-size:14px}
@@ -246,6 +249,8 @@ input[type=range]:disabled{opacity:.4}
 .zbar input{flex:1;min-width:40px}
 @media (max-width:420px){.zbar{gap:4px}.zbar .zb{width:34px;height:36px;font-size:17px}}
 .zb{width:40px;height:40px;border-radius:12px;border:1.5px solid var(--line);background:var(--panel);font-size:19px;font-weight:800;cursor:pointer;flex:none;display:grid;place-items:center;color:var(--text)}
+.zb[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:#fff}
+.zb svg.i{width:20px;height:20px}
 .zb:active{transform:scale(.94)}
 .dayh{grid-column:1/-1;font-size:12px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:10px 2px 0}
 .card .by{display:block;font-size:11px;font-weight:600;color:var(--muted);line-height:1.2}
@@ -485,8 +490,19 @@ nav.top button{padding-left:2px;padding-right:2px;min-width:0}
       <button class="zb" id="zIn" aria-label="Aumentar zoom">+</button>
       <button class="zb" id="flipBtn" aria-label="Inverter a foto (espelhar)" title="Inverter (espelhar)">⇆</button>
       <button class="zb" id="rotBtn" aria-label="Girar a foto" title="Girar">↻</button>
+      <button class="zb" id="eraseMBtn" aria-label="Remover objeto" title="Remover objeto" aria-pressed="false"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 20H8.5L3.6 15.1a2 2 0 010-2.8L13 2.9a2 2 0 012.8 0l4.3 4.3a2 2 0 010 2.8L11 19"/><path d="M7 9l8 8"/></svg></button>
       <button class="zb" id="centerBtn" aria-label="Centralizar" title="Centralizar">⊙</button>
       <button class="zb" id="clearSlot" aria-label="Tirar foto do espaço" title="Tirar foto do espaço">✕</button>
+    </div>
+    <div class="erasebar" id="eraseMBar" hidden>
+      <p class="muted" style="margin:0 0 6px">Pinte com o dedo o que quer sumir (pessoa, objeto, mancha na roupa) e toque em Apagar.</p>
+      <label class="sl">Pincel <input type="range" id="brushM" min="6" max="160" value="40"><span class="v" id="brushMV">40</span></label>
+      <div class="row">
+        <button class="btn small primary" id="eraseMGo"><svg class="i"><use href="#i-spark"/></svg>Apagar</button>
+        <button class="btn small" id="eraseMClear">Limpar</button>
+        <button class="btn small" id="eraseMUndo">Desfazer</button>
+        <button class="btn small" id="eraseMDone">Pronto</button>
+      </div>
     </div>
     <p class="hint" id="pvHint"><svg class="i"><use href="#i-hand"/></svg>Toque num espaço, arraste para enquadrar e use dois dedos para dar zoom.</p>
   </div>
@@ -1343,6 +1359,7 @@ function render(ctx, preview){
   }
   drawTopLogo(ctx, W, H);
   drawText(ctx, W, H, st.tx);
+  if (preview) drawMontMask(ctx);
   if (preview && cs[st.sel] && cs.length > 1){
     const c = cs[st.sel]; ctx.strokeStyle = "#2b7cff"; ctx.lineWidth = 8;
     ctx.strokeRect(c.x + 4, c.y + 4, c.w - 8, c.h - 8);
@@ -1446,7 +1463,7 @@ $("#aiPick").addEventListener("click", async () => {
 });
 
 /* ---------- Pan, pinça e zoom ---------- */
-function attachPanZoom(cv, pick, onChange){
+function attachPanZoom(cv, pick, onChange, ex){
   const pts = new Map(); let g = null;
   const toC = e => { const r = cv.getBoundingClientRect(); return { x: (e.clientX - r.left) * cv.width / r.width, y: (e.clientY - r.top) * cv.height / r.height }; };
   const pan = (t, dx, dy) => {
@@ -1459,13 +1476,14 @@ function attachPanZoom(cv, pick, onChange){
   cv.addEventListener("pointerdown", e => {
     const p = toC(e); pts.set(e.pointerId, p);
     try{ cv.setPointerCapture(e.pointerId); }catch(_){}
-    if (pts.size === 1){ const t = pick(p); g = t ? { t, last: p, dist: 0 } : null; }
+    if (pts.size === 1){ const t = pick(p); g = t ? { t, last: p, dist: 0 } : null; if (g && ex && ex.on()){ ex.paint(g.t, p, p); onChange(); } }
     else if (pts.size === 2 && g){ const [a, b] = [...pts.values()]; g.dist = Math.hypot(a.x - b.x, a.y - b.y) || 1; g.z0 = g.t.slot.zoom; }
   });
   cv.addEventListener("pointermove", e => {
     if (!pts.has(e.pointerId)) return;
     const p = toC(e); pts.set(e.pointerId, p);
     if (!g) return;
+    if (ex && ex.on()){ if (pts.size === 1){ ex.paint(g.t, g.last, p); g.last = p; onChange(); } return; }
     if (pts.size >= 2 && g.dist){
       const [a, b] = [...pts.values()];
       g.t.slot.zoom = clamp(g.z0 * Math.hypot(a.x - b.x, a.y - b.y) / g.dist, 1, 4);
@@ -1480,6 +1498,7 @@ function attachPanZoom(cv, pick, onChange){
   };
   cv.addEventListener("pointerup", up); cv.addEventListener("pointercancel", up);
   cv.addEventListener("wheel", e => {
+    if (ex && ex.on()) return;
     const t = pick(toC(e)); if (!t) return;
     e.preventDefault(); t.slot.zoom = clamp(t.slot.zoom * (e.deltaY < 0 ? 1.06 : 1 / 1.06), 1, 4); onChange();
   }, { passive: false });
@@ -1490,11 +1509,81 @@ attachPanZoom($("#pv"), p => {
   if (i < 0) return null;
   if (st.sel !== i){ st.sel = i; draw(); syncAdjUI(); }
   const slot = st.slots[i], ph = slot && st.photos.find(q => q.id === slot.photoId);
-  return ph ? { cell: cs[i], slot, img: ph.work } : null;
-}, () => draw());
+  return ph ? { cell: cs[i], slot, img: ph.work, ph } : null;
+}, () => draw(), { on: () => !!st.erase, paint: (t, a, b) => paintMontMask(t, a, b) });
+
+/* ---------- Remover objeto na montagem ---------- */
+st.erase = false; st.eMask = null; st.eFor = null; st.eBrush = 40; const eUndo = [];
+function slotXf(cell, slot, img){
+  const sc = Math.max(cell.w / img.width, cell.h / img.height) * slot.zoom;
+  const dw = img.width * sc, dh = img.height * sc;
+  return { sc, x: cell.x - (dw - cell.w) * (slot.ox + 1) / 2, y: cell.y - (dh - cell.h) * (slot.oy + 1) / 2 };
+}
+function paintMontMask(t, a, b){
+  const img = t.img;
+  if (!st.eMask || st.eFor !== t.ph.id || st.eMask.width !== img.width || st.eMask.height !== img.height){
+    st.eMask = document.createElement("canvas"); st.eMask.width = img.width; st.eMask.height = img.height; st.eFor = t.ph.id; st.eDirty = false;
+  }
+  const x = slotXf(t.cell, t.slot, img), m = st.eMask.getContext("2d");
+  m.save(); m.beginPath(); m.rect((t.cell.x - x.x) / x.sc, (t.cell.y - x.y) / x.sc, t.cell.w / x.sc, t.cell.h / x.sc); m.clip();
+  m.strokeStyle = "#fff"; m.lineCap = m.lineJoin = "round"; m.lineWidth = st.eBrush / x.sc;
+  m.beginPath(); m.moveTo((a.x - x.x) / x.sc, (a.y - x.y) / x.sc); m.lineTo((b.x - x.x) / x.sc, (b.y - x.y) / x.sc); m.stroke(); m.restore();
+  st.eDirty = true;
+}
+function drawMontMask(ctx){
+  if (!st.erase || !st.eMask || !st.eDirty) return;
+  const cs = cells();
+  cs.forEach((cell, i) => {
+    const slot = st.slots[i]; if (!slot || slot.photoId !== st.eFor) return;
+    const ph = st.photos.find(p => p.id === slot.photoId); if (!ph) return;
+    const x = slotXf(cell, slot, ph.work), tmp = document.createElement("canvas"); tmp.width = st.eMask.width; tmp.height = st.eMask.height;
+    const tc = tmp.getContext("2d"); tc.drawImage(st.eMask, 0, 0); tc.globalCompositeOperation = "source-in"; tc.fillStyle = "rgba(255,40,60,.55)"; tc.fillRect(0, 0, tmp.width, tmp.height);
+    ctx.save(); ctx.beginPath(); ctx.rect(cell.x, cell.y, cell.w, cell.h); ctx.clip();
+    ctx.drawImage(tmp, x.x, x.y, ph.work.width * x.sc, ph.work.height * x.sc); ctx.restore();
+  });
+}
+function setErase(on){
+  st.erase = on; $("#eraseMBar").hidden = !on; $("#eraseMBtn").setAttribute("aria-pressed", on);
+  if (!on){ st.eMask = null; st.eDirty = false; }
+  draw();
+}
+function photoRefresh(ph){
+  ph.proc = null; ph.procKey = "";
+  const c = ph.work, tc = document.createElement("canvas"), ts = 240 / Math.max(c.width, c.height);
+  tc.width = Math.round(c.width * ts); tc.height = Math.round(c.height * ts); tc.getContext("2d").drawImage(c, 0, 0, tc.width, tc.height);
+  ph.thumb = tc.toDataURL("image/jpeg", .8);
+  sessSavePhoto(ph, ph.seq || Date.now()); renderTray(); draw();
+}
+$("#eraseMBtn").addEventListener("click", () => {
+  const s = st.slots[st.sel]; if (!s || !s.photoId) return toast("Toque num espaço com foto primeiro");
+  setErase(!st.erase); if (st.erase) toast("Pinte o que quer sumir", 2400);
+});
+$("#eraseMDone").addEventListener("click", () => setErase(false));
+$("#eraseMClear").addEventListener("click", () => { st.eMask = null; st.eDirty = false; draw(); });
+bindRange("brushM", v => v, v => { st.eBrush = v; });
+$("#eraseMGo").addEventListener("click", async () => {
+  const ph = st.photos.find(p => p.id === st.eFor);
+  if (!ph || !st.eMask || !st.eDirty) return toast("Pinte com o dedo o que quer apagar");
+  let w = ph.work;
+  if (!w.getContext){ const c = document.createElement("canvas"); c.width = w.width; c.height = w.height; c.getContext("2d").drawImage(w, 0, 0); w = ph.work = c; }
+  const copy = document.createElement("canvas"); copy.width = w.width; copy.height = w.height; copy.getContext("2d").drawImage(w, 0, 0);
+  eUndo.push({ id: ph.id, c: copy }); if (eUndo.length > 8) eUndo.shift();
+  const sm = document.createElement("canvas"); sm.width = st.eMask.width; sm.height = st.eMask.height;
+  const sx = sm.getContext("2d"); sx.filter = "blur(2px)"; sx.drawImage(st.eMask, 0, 0); sx.drawImage(st.eMask, 0, 0);
+  toast("Apagando…", 1500); await new Promise(r => setTimeout(r, 30));
+  const ok = inpaint(w, sm);
+  st.eMask = null; st.eDirty = false; photoRefresh(ph);
+  toast(ok ? "Apagado. Não ficou bom? Toque em Desfazer." : "Nada marcado", 3000);
+});
+$("#eraseMUndo").addEventListener("click", () => {
+  const u = eUndo.pop(); if (!u) return toast("Nada para desfazer");
+  const ph = st.photos.find(p => p.id === u.id); if (!ph) return;
+  ph.work = u.c; st.eMask = null; st.eDirty = false; photoRefresh(ph);
+});
 function syncFrameControls(){
   const s = st.slots[st.sel];
   $("#zbar").hidden = !(s && s.photoId);
+  if (st.erase && !(s && s.photoId)) setErase(false);
   $("#zoom").value = s ? s.zoom : 1;
 }
 const zoomBy = f => { const s = st.slots[st.sel]; if (s && s.photoId){ s.zoom = clamp(s.zoom * f, 1, 4); draw(); } };
