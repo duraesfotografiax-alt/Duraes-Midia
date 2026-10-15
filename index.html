@@ -280,6 +280,43 @@ textarea.tin{min-height:72px;resize:vertical;margin-top:8px}
 .auth .msg{background:#232323;border-radius:13px;padding:12px 14px;font-size:14px;margin:12px 0 0;color:#e8e4de}
 .auth .msg.err{background:#3a1a12;color:#ffb59a}
 .auth .msg:empty{display:none}
+.auth .btn.go:not(.primary):not(.gbtn){background:#232323;color:#f4f2ef;border:1.5px solid #3a3a3a;box-shadow:none}
+.auth .lbl2{font-size:13px;font-weight:700;color:#d8d4ce;margin:16px 0 8px}
+.planpick{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.planpick.three{grid-template-columns:1fr 1fr 1fr}
+.planpick .pp{display:grid;gap:2px;text-align:left;padding:12px;border-radius:14px;border:1.5px solid #3a3a3a;background:#1d1d1d;color:#f4f2ef;font:inherit;cursor:pointer}
+.planpick.three .pp{text-align:center}
+.planpick .pp b{font-size:15px}
+.planpick .pp span{font-weight:800;color:#ff9645;font-size:14px}
+.planpick .pp small{color:#a9a49d;font-size:12px;line-height:1.3}
+.planpick .pp[aria-pressed="true"]{border-color:#ff6a12;background:#3a2213}
+.auth .paysum{display:flex;justify-content:space-between;gap:10px;align-items:center;margin-top:12px;padding:12px 14px;border-radius:13px;border:1px solid #333;font-weight:700}
+.auth .paysum:empty{display:none}
+.auth .paysum span{color:#ff9645}
+.auth .note2{font-size:12px;color:#a9a49d;margin:8px 2px 0}
+.igbox{display:grid;gap:10px;margin-bottom:14px}
+.igbox .row{align-items:center}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-top:6px}
+.kpi{background:var(--panel2);border-radius:16px;padding:12px 14px;display:grid;gap:2px;min-width:0}
+.kpi small{color:var(--muted);font-weight:700;font-size:12px}
+.kpi b{font-size:26px;line-height:1.1;font-variant-numeric:tabular-nums}
+.kpi span{color:var(--muted);font-size:12px}
+.funil{display:grid;gap:8px;margin-top:12px}
+.fstep{display:grid;grid-template-columns:minmax(0,150px) 1fr 44px;gap:10px;align-items:center;font-size:14px}
+.fstep .bar{height:22px;border-radius:7px;background:var(--panel2);overflow:hidden}
+.fstep .bar i{display:block;height:100%;background:linear-gradient(90deg,var(--accent2),var(--accent));border-radius:7px;min-width:2px}
+.fstep b{text-align:right;font-variant-numeric:tabular-nums}
+.chips.small{display:flex;flex-wrap:wrap;gap:6px;grid-template-columns:none}
+.chips.small .chip{padding:6px 12px;font-size:12.5px;min-height:0;width:auto;flex:none}
+a.btn{text-decoration:none;color:inherit}
+.igcard{border:1px solid var(--line);border-radius:16px;padding:12px 14px;margin-top:10px;display:grid;gap:8px;background:var(--panel)}
+.igcard .top{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.igcard .top b{font-size:15.5px;margin-right:auto}
+.igcard .meta{color:var(--muted);font-size:13px;display:flex;flex-wrap:wrap;gap:4px 14px}
+.igcard .row{gap:6px}
+.st{font-size:11.5px;font-weight:800;border-radius:99px;padding:3px 9px;background:var(--panel2);color:var(--muted)}
+.st.ok{background:#1f9d5522;color:#1f9d55}.st.warn{background:#e0a10033;color:#a87400}.st.bad{background:#d3323a22;color:#d3323a}.st.acc{background:var(--accent-soft);color:var(--accent)}
+.convlink{font-family:ui-monospace,Menlo,monospace;font-size:12.5px;background:var(--panel2);border:1.5px dashed var(--accent);border-radius:12px;padding:10px 12px;overflow-wrap:anywhere}
 .teamitem{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:10px;border:1.5px solid var(--line);border-radius:16px;margin-top:8px}
 .teamitem .who{flex:1;min-width:150px}
 .teamitem .who b{display:block}
@@ -460,6 +497,42 @@ nav.top button{padding-left:2px;padding-right:2px;min-width:0}
       <button class="link" id="pendOut">Sair e usar outra conta</button>
     </div>
 
+    <div id="authStart" hidden>
+      <p class="msg" id="startHi"></p>
+      <p class="lbl2">Escolha o plano</p>
+      <div class="planpick" id="planPick">
+        <button type="button" class="pp" data-plano="individual" aria-pressed="false"><b>Individual</b><span>R$ 12,90/mês</span><small>Só você</small></button>
+        <button type="button" class="pp" data-plano="equipe" aria-pressed="true"><b>Equipe</b><span>R$ 29,90/mês</span><small>Até 10 pessoas, entram por link</small></button>
+      </div>
+      <label class="f"><span>Nome da igreja</span><input id="sNome" type="text" autocomplete="organization" placeholder="Ex.: Igreja do Centro"></label>
+      <label class="f"><span>Cidade</span><input id="sCidade" type="text" autocomplete="address-level2" placeholder="Ex.: Campinas - SP"></label>
+      <label class="f"><span>WhatsApp</span><input id="sZap" type="tel" inputmode="tel" autocomplete="tel" placeholder="(19) 99999-9999"></label>
+      <button class="btn primary big go" id="sGo">Continuar para o pagamento</button>
+      <div class="or">ou</div>
+      <label class="f"><span>Recebeu um convite? Cole o link aqui</span><input id="sConv" type="text" placeholder="Link ou código do convite"></label>
+      <button class="btn big go" id="sConvGo">Entrar na equipe</button>
+      <button class="link" id="startOut">Sair e usar outra conta</button>
+    </div>
+
+    <div id="authPay" hidden>
+      <div class="msg" id="payMsg"></div>
+      <div class="paysum" id="paySum"></div>
+      <div id="payForm">
+        <label class="f"><span>CPF ou CNPJ de quem vai pagar</span><input id="pDoc" type="text" inputmode="numeric" placeholder="000.000.000-00"></label>
+        <p class="lbl2">Forma de pagamento</p>
+        <div class="planpick three" id="payPick">
+          <button type="button" class="pp" data-forma="PIX" aria-pressed="true"><b>Pix</b><small>na hora</small></button>
+          <button type="button" class="pp" data-forma="CREDIT_CARD" aria-pressed="false"><b>Cartão</b><small>automático</small></button>
+          <button type="button" class="pp" data-forma="BOLETO" aria-pressed="false"><b>Boleto</b><small>até 3 dias</small></button>
+        </div>
+        <button class="btn primary big go" id="pGo">Ir para o pagamento</button>
+        <p class="note2">O pagamento é feito no ambiente seguro do Asaas. Assim que cair, a conta libera sozinha.</p>
+      </div>
+      <button class="btn big go" id="pCheck">Já paguei, verificar</button>
+      <button class="link" id="pPlan">Trocar o plano</button>
+      <button class="link" id="payOut">Sair</button>
+    </div>
+
     <p class="msg" id="aMsg"></p>
   </div>
 </div>
@@ -477,6 +550,7 @@ nav.top button{padding-left:2px;padding-right:2px;min-width:0}
   <button role="tab" data-view="fluxo" aria-selected="false" id="fluxoTab" hidden><svg class="i"><use href="#i-cal"/></svg>Fluxo<span class="badge" id="fluxoBadge" hidden>0</span></button>
   <button role="tab" data-view="poster" aria-selected="false"><svg class="i"><use href="#i-poster"/></svg>Pôster</button>
   <button role="tab" data-view="lib" aria-selected="false"><svg class="i"><use href="#i-lib"/></svg>Biblioteca</button>
+  <button role="tab" data-view="painel" aria-selected="false" id="painelTab" hidden><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>Painel</button>
 </nav>
 
 <main>
@@ -796,6 +870,23 @@ nav.top button{padding-left:2px;padding-right:2px;min-width:0}
 </section>
 
 <!-- BIBLIOTECA -->
+<section class="view" id="v-painel">
+  <div class="panel">
+    <div class="ptitle"><span class="ic"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg></span><h2>Painel do dono</h2></div>
+    <p class="lead">Assinaturas, receita e uso de todas as igrejas. Só você vê esta aba.</p>
+    <div class="kpis" id="pzKpis"></div>
+  </div>
+  <div class="panel">
+    <div class="row" style="justify-content:space-between;align-items:baseline"><h3 style="margin:0">Página de vendas</h3><div class="chips small" id="pnRange"></div></div>
+    <div class="funil" id="pnFunil"></div>
+    <p class="muted" id="pnOrig" style="margin-top:10px"></p>
+  </div>
+  <div class="panel">
+    <div class="row" style="justify-content:space-between;align-items:center"><h3 style="margin:0">Igrejas</h3><div class="chips small" id="pnFiltro"></div></div>
+    <div id="pnLista"></div>
+  </div>
+</section>
+
 <section class="view" id="v-lib">
   <div class="libgrid">
   <div class="panel full" id="acctPanel">
@@ -807,7 +898,25 @@ nav.top button{padding-left:2px;padding-right:2px;min-width:0}
   </div>
   <div class="panel full" id="teamPanel" hidden>
     <div class="ptitle"><span class="ic"><svg class="i"><use href="#i-grid"/></svg></span><h2>Equipe</h2></div>
-    <p class="lead">Quem cria conta precisa ser liberado por você antes de usar o app.</p>
+    <div class="igbox" id="igBox">
+      <div class="row" style="justify-content:space-between"><div><b id="igNome"></b><br><span class="muted" id="igInfo"></span></div><span class="pill ok" id="igPlano"></span></div>
+      <div id="convBox" hidden>
+        <p class="lead" style="margin:0">Mande este link para quem serve com você. Quem entrar por ele já cai liberado na sua equipe.</p>
+        <div class="convlink" id="convLink"></div>
+        <div class="row">
+          <button class="btn small primary" id="convCopy">Copiar link</button>
+          <button class="btn small" id="convShare">Enviar</button>
+          <button class="btn small" id="convNew">Gerar link novo</button>
+        </div>
+      </div>
+      <div id="upBox" hidden>
+        <p class="lead" style="margin:0">Seu plano é Individual, só para você. Para chamar a sua equipe, mude para o plano Equipe (R$ 29,90/mês, até 10 pessoas).</p>
+        <div class="row" style="margin-top:8px"><button class="btn small primary" id="upEquipe">Mudar para Equipe</button></div>
+      </div>
+      <div class="row" id="cancelRow" hidden><button class="btn small" id="subCancel">Cancelar assinatura</button><span class="muted" id="cancelInfo"></span></div>
+      <div class="row" id="igRenRow"><input type="text" id="igRen" class="tin" placeholder="Nome da igreja" style="flex:1;min-width:160px"><button class="btn small" id="igRenGo">Renomear</button></div>
+    </div>
+    <p class="lead" id="teamLead">Pessoas da equipe. Aqui você bloqueia, tira da equipe ou dá permissão de administrador.</p>
     <div id="teamList"></div>
   </div>
   <div class="panel">
@@ -1960,7 +2069,7 @@ async function uploadLogos(files, folder){
       const base = f.name.replace(/\.[^.]+$/, "").replace(/\//g, "-");
       const name = folder ? folder + "/" + base : base;
       const ext = (f.name.split(".").pop() || "png").toLowerCase().replace(/[^a-z0-9]/g, "") || "png";
-      const path = "logos/" + uid() + Date.now().toString(36) + "." + ext;
+      const path = st.igreja.id + "/logos/" + uid() + Date.now().toString(36) + "." + ext;
       const up = await SB.storage.from(BUCKET).upload(path, f, { contentType: f.type || "image/png" });
       if (up.error) throw up.error;
       const ins = await SB.from("logos").insert({ name, path });
@@ -2067,7 +2176,7 @@ async function deleteLogo(l){
 
 /* ---------- Library: foto da igreja, salvos e predefinições ---------- */
 async function saveCfg(){
-  const r = await SB.from("config").update({ bg_path: st.cfg.bgAssetId || null, default_logo_id: st.cfg.defaultLogoId || null }).eq("id", 1);
+  const r = await SB.from("config").upsert({ igreja_id: st.igreja.id, bg_path: st.cfg.bgAssetId || null, default_logo_id: st.cfg.defaultLogoId || null }, { onConflict: "igreja_id" });
   if (r.error){ toast("Não deu para salvar" + errHint(r.error), 3800); return false; }
   return true;
 }
@@ -2087,7 +2196,7 @@ $("#bgIn").addEventListener("change", async e => {
     const c = await fileToWork(f), s = Math.min(1, 1600 / Math.max(c.width, c.height)), d = document.createElement("canvas");
     d.width = Math.round(c.width * s); d.height = Math.round(c.height * s); d.getContext("2d").drawImage(c, 0, 0, d.width, d.height);
     const blob = await new Promise(r => d.toBlob(r, "image/jpeg", .88));
-    const old = st.cfg.bgAssetId, path = "igreja/" + uid() + Date.now().toString(36) + ".jpg";
+    const old = st.cfg.bgAssetId, path = st.igreja.id + "/igreja/" + uid() + Date.now().toString(36) + ".jpg";
     const up = await SB.storage.from(BUCKET).upload(path, blob, { contentType: "image/jpeg" });
     if (up.error) throw up.error;
     st.cfg.bgAssetId = path;
@@ -2942,7 +3051,7 @@ $("#addBtn").addEventListener("click", async () => {
   try{
     const blob = await makeBlob(kind);
     const ed = kind === "mont" && done.editing ? done.items.find(i => i.id === done.editing) : null;
-    const path = st.me.id + "/" + uid() + Date.now().toString(36) + ".jpg";
+    const path = st.igreja.id + "/" + st.me.id + "/" + uid() + Date.now().toString(36) + ".jpg";
     const up = await SB.storage.from(PB).upload(path, blob, { contentType: "image/jpeg" });
     if (up.error) throw up.error;
     if (ed){
@@ -3020,12 +3129,13 @@ $$("nav.top button").forEach(b => b.addEventListener("click", () => {
   $$("nav.top button").forEach(x => x.setAttribute("aria-selected", x === b));
   $$(".view").forEach(v => v.classList.toggle("on", v.id === "v-" + b.dataset.view));
   const v = b.dataset.view;
-  $("#dlBar").hidden = v === "lib" || v === "done" || v === "fluxo" || v === "poster";
+  $("#dlBar").hidden = v === "lib" || v === "done" || v === "fluxo" || v === "poster" || v === "painel";
   if (v === "poster"){ renderPosterChips(); renderPoster(); }
   if (v === "fluxo"){ loadFluxo(); renderNotif(); }
   showLink();
   if (v === "done"){ renderDoneFilter(); loadDone(); }
   if (v === "arte") drawArt();
+  if (v === "painel") loadPainel();
   window.scrollTo(0, 0);
 }));
 $$(".seg button").forEach(b => b.addEventListener("click", () => {
@@ -3530,7 +3640,7 @@ async function loadLayouts(){
   if (!r.error) setLayouts(r.data.map(l => ({ id: l.id, name: l.name, rows: Array.isArray(l.faixas) && l.faixas.length ? l.faixas : [{ h: 1, cols: 1 }], createdAt: Date.parse(l.created_at) || 0 })));
 }
 async function loadCfg(){
-  const r = await SB.from("config").select("*").eq("id", 1).maybeSingle();
+  const r = await SB.from("config").select("*").eq("igreja_id", st.igreja.id).maybeSingle();
   if (r.data){
     st.cfg.address = r.data.address || ""; st.cfg.hours = r.data.hours || "";
     st.cfg.bgAssetId = r.data.bg_path || null; st.cfg.defaultLogoId = r.data.default_logo_id || null;
@@ -3542,7 +3652,7 @@ async function loadAll(){ await loadLogos(); await Promise.all([loadLayouts(), l
 
 let mode = "in";
 function amsg(t, err){ const m = $("#aMsg"); m.textContent = t || ""; m.classList.toggle("err", !!err); }
-function showAuth(which){ $("#auth").hidden = false; ["authForm", "authRecover", "authPending"].forEach(id => { $("#" + id).hidden = id !== which; }); }
+function showAuth(which){ $("#auth").hidden = false; ["authForm", "authRecover", "authPending", "authStart", "authPay"].forEach(id => { $("#" + id).hidden = id !== which; }); }
 function setMode(m){
   mode = m;
   $$("#authForm .tabs button").forEach(b => b.setAttribute("aria-selected", b.dataset.m === m));
@@ -3617,11 +3727,24 @@ async function enter(session){
   const p = r.data;
   const name = (p && p.name) || meta.name || meta.full_name || (u.email || "").split("@")[0];
   const first = String(name).trim().split(/\s+/)[0] || "você";
-  if (!p || !p.approved){
-    showAuth("authPending"); amsg("");
-    $("#pendMsg").textContent = "Olá, " + first + "! Sua conta foi criada. Peça para o administrador liberar seu acesso. Depois toque em Verificar de novo.";
+  if (p && pendConvite()){
+    const code = pendConvite(); setPend("convitePend", "");
+    const j = await SB.rpc("entrar_convite", { p_codigo: code });
+    if (j.error){ amsg(rpcErr(j.error), true); }
+    else { toast("Você entrou na equipe " + j.data, 3600); return enter(session); }
+  }
+  if (!p || !p.igreja_id){ showStart(first, p); return; }
+  const ig = (await SB.from("igrejas").select("*").eq("id", p.igreja_id).maybeSingle()).data;
+  const ok = (await SB.rpc("is_approved")).data === true;
+  if (!ok){
+    if (ig && ig.dono === u.id){ showPay(ig, first); return; }
+    showAuth("authPending");
+    $("#pendMsg").textContent = !p.approved
+      ? "Olá, " + first + "! Sua conta foi criada. Peça para o administrador liberar seu acesso. Depois toque em Verificar de novo."
+      : "Olá, " + first + "! A assinatura da " + ((ig && ig.nome) || "sua igreja") + " está pendente. Avise o responsável pela conta. Depois toque em Verificar de novo.";
     return;
   }
+  st.igreja = ig; st.plataforma = !!p.plataforma; $("#painelTab").hidden = !st.plataforma;
   st.isAdmin = !!p.is_admin; st.me = { id: u.id, name, email: u.email };
   const h = new Date().getHours();
   $("#helloHi").textContent = (h < 12 ? "Bom dia" : h < 18 ? "Boa tarde" : "Boa noite") + ",";
@@ -3630,7 +3753,7 @@ async function enter(session){
   if (av){ $("#helloAv").src = av; $("#helloAv").hidden = false; } else $("#helloAv").hidden = true;
   $("#hello").hidden = false;
   $("#acctName").textContent = name;
-  $("#acctEmail").textContent = (u.email || "") + (st.isAdmin ? " (administrador)" : "");
+  $("#acctEmail").textContent = (u.email || "") + (st.isAdmin ? " (administrador)" : "") + (ig ? " · " + ig.nome : "");
   applyRole();
   setFluxoAccess(!!(p.is_admin || p.fluxo));
   $("#auth").hidden = true; amsg("");
@@ -3641,6 +3764,7 @@ function applyRole(){
   ["#logoIn", "#bgIn"].forEach(sel => { $(sel).parentElement.hidden = !a; });
   $("#logoName").hidden = !a;
   $("#teamPanel").hidden = !a;
+  renderIgreja();
   let n = $("#roleNote");
   if (!a && !n){
     n = document.createElement("p"); n.id = "roleNote"; n.className = "muted";
@@ -3674,9 +3798,10 @@ async function loadTeam(notify = true){
       loadTeam(false);
     });
     if (st.me && p.id === st.me.id){ ap.hidden = true; ad.hidden = true; rm.hidden = true; }
+    if (st.igreja && p.id === st.igreja.dono){ ap.hidden = true; ad.hidden = true; rm.hidden = true; pill.textContent = "Responsável"; }
     armButton(rm, "Remover", async () => {
       const x = await SB.rpc("admin_delete_user", { uid: p.id });
-      if (x.error) toast("Não deu para remover" + errHint(x.error), 3800); else toast("Conta removida");
+      if (x.error) toast("Não deu para remover" + errHint(x.error), 3800); else toast((p.name || "Pessoa") + " saiu da equipe");
       loadTeam(false);
     });
     ap.addEventListener("click", async () => {
@@ -3691,10 +3816,220 @@ async function loadTeam(notify = true){
     });
     box.appendChild(it);
   });
+  if (st.igreja){ const n = r.data.filter(p => p.approved).length; $("#igInfo").dataset.n = n; renderIgreja(); }
   const waiting = r.data.filter(p => !p.approved).length;
   if (waiting && notify !== false) toast(waiting + " pessoa(s) esperando liberação na Biblioteca", 3600);
   if (waiting && !loadTeam._told){ loadTeam._told = true; toast(waiting + " pessoa(s) esperando liberação na Biblioteca", 3600); }
 }
+
+/* ---------- Painel do dono da plataforma ---------- */
+const pn = { dias: 30, filtro: "todas", igs: [], ev: [] };
+const PRECO_NUM = { individual: 12.9, equipe: 29.9, cortesia: 0 };
+const brl = v => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+const STATUS_TXT = { pendente: ["Aguardando pagamento", "warn"], ativa: ["Em dia", "ok"], atrasada: ["Atrasada", "bad"], cancelada: ["Cancelada", "bad"], bloqueada: ["Bloqueada", "bad"] };
+async function loadPainel(){
+  if (!st.plataforma) return;
+  const desde = new Date(Date.now() - 90 * 864e5).toISOString();
+  const [a, b] = await Promise.all([SB.rpc("painel_igrejas"), SB.from("eventos").select("tipo,origem,campanha,sessao,criado_em").gte("criado_em", desde).order("criado_em", { ascending: false }).limit(20000)]);
+  if (a.error) return toast("Não deu para carregar o painel" + errHint(a.error), 3800);
+  pn.igs = a.data || []; pn.ev = b.data || [];
+  renderPainel();
+}
+function renderPainel(){
+  const igs = pn.igs, hoje = Date.now(), mesIni = new Date(); mesIni.setDate(1); mesIni.setHours(0, 0, 0, 0);
+  const pagantes = igs.filter(i => i.liberada && i.plano !== "cortesia" && i.status !== "pendente");
+  const receita = pagantes.filter(i => i.status !== "cancelada").reduce((t, i) => t + PRECO_NUM[i.plano], 0);
+  const novas = igs.filter(i => Date.parse(i.criada) >= mesIni && i.plano !== "cortesia" && i.pago_ate).length;
+  const pend = igs.filter(i => i.status === "pendente").length;
+  const risco = igs.filter(i => i.status === "atrasada" || (i.liberada && i.plano !== "cortesia" && (!i.ultima || hoje - Date.parse(i.ultima) > 14 * 864e5))).length;
+  const pessoas = igs.reduce((t, i) => t + (i.membros || 0), 0);
+  const k = [["Assinantes", pagantes.length, pagantes.filter(i => i.plano === "equipe").length + " Equipe · " + pagantes.filter(i => i.plano === "individual").length + " Individual"],
+    ["Receita por mês", brl(receita), "assinaturas em dia"], ["Novas no mês", novas, "pagaram a 1ª vez"],
+    ["Sem pagar", pend, "criaram a conta e pararam"], ["Precisam de atenção", risco, "atrasadas ou sem usar há 14 dias"], ["Pessoas usando", pessoas, igs.length + " contas no total"]];
+  const kb = $("#pzKpis"); kb.innerHTML = "";
+  k.forEach(([t, v, sub]) => { const d = document.createElement("div"); d.className = "kpi"; d.innerHTML = "<small></small><b></b><span></span>"; d.children[0].textContent = t; d.children[1].textContent = v; d.children[2].textContent = sub; kb.appendChild(d); });
+
+  const rb = $("#pnRange"); rb.innerHTML = "";
+  [[7, "7 dias"], [30, "30 dias"], [90, "90 dias"]].forEach(([d, l]) => { const c = document.createElement("button"); c.className = "chip"; c.textContent = l; c.setAttribute("aria-pressed", pn.dias === d); c.addEventListener("click", () => { pn.dias = d; renderPainel(); }); rb.appendChild(c); });
+  const lim = hoje - pn.dias * 864e5, ev = pn.ev.filter(e => Date.parse(e.criado_em) >= lim);
+  const uniq = t => new Set(ev.filter(e => e.tipo === t).map(e => e.sessao || e.criado_em)).size;
+  const contas = igs.filter(i => Date.parse(i.criada) >= lim && i.plano !== "cortesia");
+  const steps = [["Visitas", uniq("visita")], ["Clicaram em assinar", uniq("clique_assinar")], ["Preencheram os dados", uniq("checkout")], ["Criaram a conta", contas.length], ["Pagaram", contas.filter(i => i.pago_ate).length]];
+  const mx = Math.max(1, ...steps.map(s => s[1])), fb = $("#pnFunil"); fb.innerHTML = "";
+  steps.forEach(([t, v], idx) => {
+    const d = document.createElement("div"); d.className = "fstep";
+    const pct = idx && steps[idx - 1][1] ? " (" + Math.round(v / steps[idx - 1][1] * 100) + "%)" : "";
+    d.innerHTML = '<span></span><div class="bar"><i></i></div><b></b>'; d.children[0].textContent = t; d.querySelector("i").style.width = (v / mx * 100) + "%"; d.children[2].textContent = v; d.title = t + ": " + v + pct;
+    fb.appendChild(d);
+  });
+  const orig = {}; ev.filter(e => e.tipo === "visita").forEach(e => { const o = e.campanha ? (e.origem || "direto") + " / " + e.campanha : (e.origem || "direto"); orig[o] = (orig[o] || 0) + 1; });
+  const top = Object.entries(orig).sort((a, b) => b[1] - a[1]).slice(0, 6);
+  $("#pnOrig").textContent = top.length ? "De onde vieram: " + top.map(([o, n]) => o + " (" + n + ")").join(" · ") : "Ainda não há visitas registradas nesse período.";
+
+  const fb2 = $("#pnFiltro"); fb2.innerHTML = "";
+  [["todas", "Todas"], ["dia", "Em dia"], ["pend", "Sem pagar"], ["atencao", "Atenção"]].forEach(([f, l]) => { const c = document.createElement("button"); c.className = "chip"; c.textContent = l; c.setAttribute("aria-pressed", pn.filtro === f); c.addEventListener("click", () => { pn.filtro = f; renderPainel(); }); fb2.appendChild(c); });
+  const lista = igs.filter(i => pn.filtro === "todas" || (pn.filtro === "dia" && i.liberada && i.status !== "pendente") || (pn.filtro === "pend" && i.status === "pendente")
+    || (pn.filtro === "atencao" && (["atrasada", "cancelada", "bloqueada"].includes(i.status) || (i.liberada && i.plano !== "cortesia" && (!i.ultima || hoje - Date.parse(i.ultima) > 14 * 864e5)))));
+  const lb = $("#pnLista"); lb.innerHTML = lista.length ? "" : '<p class="muted" style="margin-top:10px">Nenhuma igreja aqui.</p>';
+  lista.forEach(i => {
+    const d = document.createElement("div"); d.className = "igcard";
+    d.innerHTML = '<div class="top"><b></b><span class="st acc pl"></span><span class="st stt"></span></div><div class="meta"></div><div class="row"></div>';
+    d.querySelector("b").textContent = i.nome + (i.cidade ? " · " + i.cidade : "");
+    d.querySelector(".pl").textContent = i.plano === "cortesia" ? "Cortesia" : i.plano === "equipe" ? "Equipe" : "Individual";
+    const [stt, cls] = i.plano === "cortesia" && i.status === "ativa" ? ["Grátis", "ok"] : STATUS_TXT[i.status] || [i.status, ""];
+    const sp = d.querySelector(".stt"); sp.textContent = stt; sp.classList.add(cls);
+    const fmt = x => x ? new Date(x).toLocaleDateString("pt-BR") : "nunca";
+    const meta = [(i.dono_nome || "") + (i.dono_email ? " · " + i.dono_email : ""), i.membros + (i.membros === 1 ? " pessoa" : " pessoas"), i.prontas_30d + " montagens em 30 dias", "última: " + fmt(i.ultima)];
+    if (i.pago_ate && i.plano !== "cortesia") meta.push("pago até " + i.pago_ate.split("-").reverse().join("/"));
+    meta.push("desde " + fmt(i.criada));
+    meta.forEach(t => { const m = document.createElement("span"); m.textContent = t; d.querySelector(".meta").appendChild(m); });
+    const row = d.querySelector(".row");
+    if (i.whatsapp){ const a = document.createElement("a"); a.className = "btn small"; a.textContent = "WhatsApp"; a.target = "_blank"; a.rel = "noopener"; a.href = "https://wa.me/55" + i.whatsapp.replace(/\D/g, ""); row.appendChild(a); }
+    const act = (label, acao, dias) => { const b = document.createElement("button"); b.className = "btn small"; b.textContent = label; armButton(b, label, async () => { const r = await SB.rpc("painel_acao", { g: i.id, acao, dias: dias || 0 }); if (r.error) toast("Não deu" + errHint(r.error)); else { toast("Feito"); loadPainel(); } }); row.appendChild(b); };
+    if (i.plano !== "cortesia"){ act("+7 dias grátis", "dias", 7); act("Tornar cortesia", "cortesia"); }
+    if (i.status === "bloqueada") act("Desbloquear", "desbloquear"); else if (st.igreja && i.id !== st.igreja.id) act("Bloquear", "bloquear");
+    lb.appendChild(d);
+  });
+}
+
+/* ---------- Igrejas: cadastro, convite, pagamento ---------- */
+const PLANOS = { individual: { nome: "Individual", preco: "R$ 12,90/mês", lim: 1 }, equipe: { nome: "Equipe", preco: "R$ 29,90/mês", lim: 10 }, cortesia: { nome: "Cortesia", preco: "grátis", lim: null } };
+function setPend(k, v){ try{ v ? localStorage.setItem(k, v) : localStorage.removeItem(k); }catch(e){} }
+function getPend(k){ try{ return localStorage.getItem(k) || ""; }catch(e){ return ""; } }
+const pendConvite = () => getPend("convitePend");
+function codeFrom(t){ t = String(t || "").trim(); const m = t.match(/convite=([a-z0-9]+)/i); return (m ? m[1] : t.replace(/^.*\//, "")).toLowerCase(); }
+(() => {
+  const q = new URLSearchParams(location.search), c = q.get("convite"), pl = q.get("plano");
+  if (c) setPend("convitePend", codeFrom(c));
+  if (pl && PLANOS[pl] && pl !== "cortesia") setPend("planoPend", pl);
+  if (c || pl){ q.delete("convite"); q.delete("plano"); const rest = q.toString(); history.replaceState(null, "", location.pathname + (rest ? "?" + rest : "") + location.hash); }
+  if (c && $("#authForm")){ setTimeout(() => { if (!entered && !$("#auth").hidden && !$("#authForm").hidden){ setMode("up"); amsg("Você recebeu um convite. Crie a sua conta (ou entre, se já tiver) e você cai direto na equipe."); } }, 50); }
+})();
+function rpcErr(e){ const m = String((e && e.message) || ""); return /fetch/i.test(m) ? "Sem conexão com a internet." : m.replace(/^.*?:\s*/, "") || "Não deu certo."; }
+let startPlano = getPend("planoPend") || "equipe";
+function syncPick(box, attr, val){ $$("#" + box + " .pp").forEach(b => b.setAttribute("aria-pressed", b.dataset[attr] === val)); }
+$$("#planPick .pp").forEach(b => b.addEventListener("click", () => { startPlano = b.dataset.plano; syncPick("planPick", "plano", startPlano); }));
+function showStart(first, p, ig){
+  showAuth("authStart"); amsg("");
+  $("#startHi").textContent = "Olá, " + first + "! Falta pouco. Crie a conta da sua igreja ou entre na equipe de alguém pelo convite.";
+  syncPick("planPick", "plano", startPlano);
+  if (ig){ $("#sNome").value = ig.nome || ""; $("#sCidade").value = ig.cidade || ""; $("#sZap").value = ig.whatsapp || ""; }
+}
+$("#sZap").addEventListener("input", e => { const d = e.target.value.replace(/\D/g, "").slice(0, 11); e.target.value = d.length > 6 ? "(" + d.slice(0, 2) + ") " + d.slice(2, d.length - 4) + "-" + d.slice(-4) : d.length > 2 ? "(" + d.slice(0, 2) + ") " + d.slice(2) : d; });
+$("#sGo").addEventListener("click", async () => {
+  const nome = $("#sNome").value.trim(), btn = $("#sGo");
+  if (nome.length < 3) return amsg("Digite o nome da igreja.", true);
+  if ($("#sZap").value.replace(/\D/g, "").length < 10) return amsg("Digite o WhatsApp com DDD.", true);
+  btn.disabled = true;
+  const r = await SB.rpc("criar_igreja", { p_nome: nome, p_plano: startPlano, p_cidade: $("#sCidade").value.trim(), p_whatsapp: $("#sZap").value.trim() });
+  btn.disabled = false;
+  if (r.error) return amsg(rpcErr(r.error), true);
+  setPend("planoPend", ""); amsg("");
+  enter((await SB.auth.getSession()).data.session);
+});
+$("#sConvGo").addEventListener("click", async () => {
+  const code = codeFrom($("#sConv").value); if (!code) return amsg("Cole o link do convite.", true);
+  const r = await SB.rpc("entrar_convite", { p_codigo: code });
+  if (r.error) return amsg(rpcErr(r.error), true);
+  toast("Você entrou na equipe " + r.data, 3600); amsg("");
+  enter((await SB.auth.getSession()).data.session);
+});
+$("#startOut").addEventListener("click", signOut);
+$("#payOut").addEventListener("click", signOut);
+let payIg = null, payForma = getPend("formaPend") || "PIX";
+$$("#payPick .pp").forEach(b => b.addEventListener("click", () => { payForma = b.dataset.forma; setPend("formaPend", payForma); syncPick("payPick", "forma", payForma); }));
+function showPay(ig, first){
+  payIg = ig; showAuth("authPay"); amsg("");
+  const pl = PLANOS[ig.plano] || PLANOS.individual;
+  const blocked = ig.status === "bloqueada";
+  $("#payMsg").textContent = blocked ? "A conta da " + ig.nome + " está bloqueada. Fale com o suporte."
+    : ig.status === "pendente" ? "Olá, " + first + "! Falta só o pagamento para liberar a conta da " + ig.nome + "."
+    : "Olá, " + first + "! A assinatura da " + ig.nome + " venceu. Pague para voltar a usar. Nada foi apagado.";
+  $("#paySum").innerHTML = ""; const a = document.createElement("b"); a.textContent = "Plano " + pl.nome; const b = document.createElement("span"); b.textContent = pl.preco; $("#paySum").append(a, b);
+  $("#payForm").hidden = blocked; $("#pPlan").hidden = ig.status !== "pendente";
+  syncPick("payPick", "forma", payForma);
+}
+$("#pDoc").addEventListener("input", e => {
+  const d = e.target.value.replace(/\D/g, "").slice(0, 14);
+  e.target.value = d.length <= 11 ? d.replace(/(\d{3})(\d)/, "$1.$2").replace(/(\d{3})(\d)/, "$1.$2").replace(/(\d{3})(\d{1,2})$/, "$1-$2")
+    : d.replace(/^(\d{2})(\d)/, "$1.$2").replace(/^(\d{2})\.(\d{3})(\d)/, "$1.$2.$3").replace(/\.(\d{3})(\d)/, ".$1/$2").replace(/(\d{4})(\d)/, "$1-$2");
+});
+async function assinar(body){
+  const r = await SB.functions.invoke("asaas-assinar", { body });
+  let err = r.error ? (r.error.message || "erro") : r.data && r.data.erro;
+  if (r.error && r.error.context && r.error.context.json){ try{ const j = await r.error.context.json(); if (j && j.erro) err = j.erro; }catch(e){} }
+  return { err, data: r.data };
+}
+$("#pGo").addEventListener("click", async () => {
+  const doc = $("#pDoc").value.replace(/\D/g, ""), btn = $("#pGo");
+  if (doc.length !== 11 && doc.length !== 14) return amsg("Digite um CPF ou CNPJ válido.", true);
+  btn.disabled = true; amsg("Gerando o pagamento…");
+  const { err, data } = await assinar({ plano: payIg.plano, doc, forma: payForma });
+  btn.disabled = false;
+  if (err || !data || !data.url) return amsg(err ? "Não deu para gerar o pagamento: " + err : "Não deu para gerar o pagamento.", true);
+  amsg("Abrindo o pagamento… Depois de pagar, volte aqui e toque em Já paguei.");
+  location.href = data.url;
+});
+$("#pCheck").addEventListener("click", async () => enter((await SB.auth.getSession()).data.session));
+$("#pPlan").addEventListener("click", async () => {
+  startPlano = payIg.plano; const s = (await SB.auth.getSession()).data.session;
+  showStart(((s && s.user.user_metadata.name) || "").split(" ")[0] || "você", null, payIg);
+});
+
+function conviteUrl(){ return location.origin + location.pathname + "?convite=" + (st.igreja && st.igreja.convite || ""); }
+function renderIgreja(){
+  const ig = st.igreja; if (!ig || !$("#igNome")) return;
+  const pl = PLANOS[ig.plano] || PLANOS.individual, n = +$("#igInfo").dataset.n || 0;
+  $("#igNome").textContent = ig.nome;
+  $("#igPlano").textContent = "Plano " + pl.nome;
+  const parts = [];
+  if (n) parts.push(n + (pl.lim ? " de " + pl.lim : "") + (n === 1 ? " pessoa" : " pessoas"));
+  if (ig.pago_ate && ig.plano !== "cortesia"){ const d = ig.pago_ate.split("-"); parts.push("pago até " + d[2] + "/" + d[1]); }
+  $("#igInfo").textContent = parts.join(" · ");
+  $("#convBox").hidden = ig.plano === "individual";
+  $("#upBox").hidden = ig.plano !== "individual" || ig.dono !== (st.me && st.me.id);
+  $("#convLink").textContent = conviteUrl();
+  $("#igRen").value = ig.nome;
+  const souDono = st.me && ig.dono === st.me.id;
+  $("#cancelRow").hidden = !souDono || ig.plano === "cortesia" || !ig.asaas_assinatura;
+  $("#subCancel").hidden = ig.status === "cancelada";
+  $("#cancelInfo").textContent = ig.status === "cancelada" ? "Assinatura cancelada. Você usa até " + (ig.pago_ate ? ig.pago_ate.split("-").reverse().join("/") : "o fim do período pago") + "." : "";
+  $("#teamLead").hidden = ig.plano === "individual";
+  $("#teamList").hidden = ig.plano === "individual";
+}
+$("#convCopy").addEventListener("click", async () => {
+  try{ await navigator.clipboard.writeText(conviteUrl()); toast("Link copiado. Mande no grupo da equipe."); }
+  catch(e){ const r = document.createRange(); r.selectNodeContents($("#convLink")); const s = getSelection(); s.removeAllRanges(); s.addRange(r); toast("Selecionei o link. Copie e mande para a equipe."); }
+});
+$("#convShare").addEventListener("click", async () => {
+  const text = "Entra na equipe da mídia da " + st.igreja.nome + " no Estúdio da Mídia: " + conviteUrl();
+  if (navigator.share){ try{ await navigator.share({ text }); return; }catch(e){ if (e && e.name === "AbortError") return; } }
+  window.open("https://wa.me/?text=" + encodeURIComponent(text), "_blank");
+});
+armButton($("#convNew"), "Gerar link novo", async () => {
+  const r = await SB.rpc("novo_convite");
+  if (r.error) return toast("Não deu" + errHint(r.error));
+  st.igreja.convite = r.data; renderIgreja(); toast("Link novo gerado. O antigo parou de funcionar.", 3600);
+});
+$("#igRenGo").addEventListener("click", async () => {
+  const nome = $("#igRen").value.trim(); if (!nome) return;
+  const r = await SB.rpc("renomear_igreja", { p_nome: nome });
+  if (r.error) return toast("Não deu" + errHint(r.error));
+  st.igreja.nome = nome; renderIgreja(); toast("Nome atualizado");
+});
+armButton($("#subCancel"), "Cancelar assinatura", async () => {
+  const { err } = await assinar({ cancelar: true });
+  if (err) return toast("Não deu para cancelar: " + err, 4200);
+  st.igreja.status = "cancelada"; renderIgreja(); toast("Assinatura cancelada. Nada mais será cobrado.", 4200);
+});
+$("#upEquipe").addEventListener("click", async () => {
+  const btn = $("#upEquipe"); btn.disabled = true; toast("Mudando o plano…", 3000);
+  const { err } = await assinar({ plano: "equipe", trocar: true });
+  btn.disabled = false;
+  if (err) return toast("Não deu para mudar o plano: " + err, 4200);
+  st.igreja.plano = "equipe"; st.igreja.max_membros = 10; renderIgreja();
+  toast("Pronto! Agora é plano Equipe. O novo valor vem na próxima cobrança.", 4200);
+});
 
 (async () => {
   if (!window.supabase || !CFG.url || !CFG.key || /COLE/i.test(CFG.url + CFG.key)){
