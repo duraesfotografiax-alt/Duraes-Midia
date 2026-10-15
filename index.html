@@ -3971,7 +3971,16 @@ $("#pGo").addEventListener("click", async () => {
   amsg("Abrindo o pagamento… Depois de pagar, volte aqui e toque em Já paguei.");
   location.href = data.url;
 });
-$("#pCheck").addEventListener("click", async () => enter((await SB.auth.getSession()).data.session));
+$("#pCheck").addEventListener("click", async () => {
+  const btn = $("#pCheck"); btn.disabled = true; amsg("Verificando o pagamento…");
+  const { err, data } = await assinar({ verificar: true });
+  const session = (await SB.auth.getSession()).data.session;
+  await enter(session);
+  btn.disabled = false;
+  if (!$("#authPay").hidden){
+    amsg(err ? "Não deu para verificar: " + err : data && data.pago ? "Pagamento encontrado. Toque de novo." : "Ainda não encontrei o pagamento. Se você acabou de pagar, espere um minuto e toque de novo.", !!err || !(data && data.pago));
+  }
+});
 $("#pPlan").addEventListener("click", async () => {
   startPlano = payIg.plano; const s = (await SB.auth.getSession()).data.session;
   showStart(((s && s.user.user_metadata.name) || "").split(" ")[0] || "você", null, payIg);
