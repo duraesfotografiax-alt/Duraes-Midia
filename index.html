@@ -3775,7 +3775,8 @@ function applyRole(){
   renderLogoLib(); renderSaved(); renderPresets();
 }
 async function loadTeam(notify = true){
-  const r = await SB.from("profiles").select("*").order("created_at");
+  if (!st.igreja) return;
+  const r = await SB.from("profiles").select("*").eq("igreja_id", st.igreja.id).order("created_at");
   const box = $("#teamList"); box.innerHTML = "";
   if (r.error) return;
   r.data.forEach(p => {
