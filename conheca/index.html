@@ -135,6 +135,12 @@ header .btn{padding:11px 18px;font-size:15px}
 .strip b{color:var(--ink);font-weight:700}
 
 section.blk{padding-block:clamp(56px,8vw,104px)}
+.vid{display:grid;grid-template-columns:1fr auto;gap:clamp(28px,5vw,64px);align-items:center}
+.vid .head{margin-bottom:0}
+.vid .head p{color:var(--muted)}
+.vidbox{width:min(320px,78vw);border-radius:30px;padding:8px;background:var(--surface);border:1px solid var(--line);box-shadow:0 40px 70px -45px var(--accent)}
+.vidbox video{display:block;width:100%;aspect-ratio:886/1920;border-radius:22px;background:#000;object-fit:cover}
+@media (max-width:860px){ .vid{grid-template-columns:1fr;justify-items:start} .vidbox{justify-self:center} }
 .head{display:grid;gap:14px;margin-bottom:clamp(30px,4vw,48px);max-width:760px}
 
 /* como funciona */
@@ -301,6 +307,7 @@ footer .wrap{display:flex;flex-wrap:wrap;gap:12px 28px;justify-content:space-bet
       <span><b>Estúdio da Mídia</b><small>por Durães</small></span>
     </a>
     <nav class="links" aria-label="Seções">
+      <a href="#video">Vídeo</a>
       <a href="#como">Como funciona</a>
       <a href="#recursos">Recursos</a>
       <a href="#equipe">Equipe</a>
@@ -347,6 +354,23 @@ footer .wrap{display:flex;flex-wrap:wrap;gap:12px 28px;justify-content:space-bet
   <span>Ordem pela <b>hora da câmera</b></span>
   <span>Pôster em folhas <b>A4 / A3</b></span>
 </div></div>
+
+<section class="blk" id="video">
+  <div class="wrap vid">
+    <div class="head">
+      <p class="eyebrow">Veja funcionando</p>
+      <h2>Aprenda a usar em poucos minutos</h2>
+      <p>Um passo a passo gravado no celular: como entrar, montar as fotos, fazer a arte do dia e chamar a equipe. Depois de assinar, é só seguir o vídeo.</p>
+      <p><a class="btn primary" href="#planos">Quero assinar</a></p>
+    </div>
+    <div class="vidbox">
+      <video controls playsinline preload="none" poster="tutorial-poster.jpg" aria-label="Vídeo ensinando a usar o Estúdio da Mídia">
+        <source src="tutorial.mp4" type="video/mp4">
+        Seu navegador não abre este vídeo.
+      </video>
+    </div>
+  </div>
+</section>
 
 <section class="blk" id="como">
   <div class="wrap">
