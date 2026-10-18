@@ -1197,8 +1197,85 @@ async function sessAll(){
 const canvasBlob = (c, q = .92) => new Promise(r => c.toBlob(r, "image/jpeg", q));
 async function sessSavePhoto(p, order){
   const blob = await canvasBlob(p.work);
-  if (blob) sessPut({ id: p.id, name: p.name, blob, thumb: p.thumb, order: p.seq || order, taken: p.taken || 0 });
+  if (blob){ await sessPut({ id: p.id, name: p.name, blob, thumb: p.thumb, order: p.seq || order, taken: p.taken || 0, cloud: !!p.cloud }); cloudUpload(p, blob); }
 }
+/* ---------- Fotos da montagem seguem a conta: aparecem em todos os aparelhos ---------- */
+const syncDir = () => (typeof SB !== "undefined" && SB && st.igreja && st.me) ? st.igreja.id + "/" + st.me.id + "/sessao" : null;
+const syncName = p => Math.round(p.seq || 0) + "_" + Math.round(p.taken || 0) + "_" + p.id + ".jpg";
+const makeThumb = c => { const tc = document.createElement("canvas"), ts = 240 / Math.max(c.width, c.height); tc.width = Math.round(c.width * ts); tc.height = Math.round(c.height * ts); tc.getContext("2d").drawImage(c, 0, 0, tc.width, tc.height); return tc.toDataURL("image/jpeg", .8); };
+let lastSyncFail = "", lastSyncFailT = 0;
+function syncFail(m){
+  m = String(m || "erro"); console.warn("sync fotos:", m);
+  if (m === lastSyncFail && Date.now() - lastSyncFailT < 120000) return;
+  lastSyncFail = m; lastSyncFailT = Date.now(); toast("Sincronizar fotos: " + m, 6000);
+}
+async function cloudUpload(p, blob){
+  const dir = syncDir(); if (!dir || p.upBusy) return;
+  p.upBusy = true;
+  try{
+    blob = blob || await canvasBlob(p.work); if (!blob) return;
+    const path = dir + "/" + syncName(p);
+    if (p.cloud) await SB.storage.from(PB).remove([path]);
+    const r = await SB.storage.from(PB).upload(path, blob, { contentType: "image/jpeg" });
+    if (!r.error || /exist|duplicate/i.test(String(r.error.message || ""))){ p.cloud = true; const row = (await sessAll()).find(x => x.id === p.id); if (row){ row.cloud = true; sessPut(row); } }
+    else syncFail("a foto não subiu (" + (r.error.message || r.error) + ")");
+  }catch(e){ syncFail("a foto não subiu (" + (e && e.message || e) + ")"); }
+  finally{ p.upBusy = false; }
+}
+async function cloudClear(){
+  const dir = syncDir(); if (!dir) return;
+  try{ const r = await SB.storage.from(PB).list(dir, { limit: 500 }); if (!r.error && r.data && r.data.length) await SB.storage.from(PB).remove(r.data.map(f => dir + "/" + f.name)); }catch(e){}
+}
+let syncBusy = false;
+async function syncFotos(){
+  const dir = syncDir(); if (!dir || syncBusy || sessRestoring) return;
+  syncBusy = true;
+  try{
+    const r = await SB.storage.from(PB).list(dir, { limit: 300 });
+    if (r.error || !r.data){ if (r.error) syncFail("não consegui ver as fotos da conta (" + (r.error.message || r.error) + ")"); return; }
+    const remote = new Map(), now = Date.now(), old = [];
+    for (const f of r.data){
+      const m = /^(\d+)_(\d+)_([a-z0-9]+)\.jpg$/.exec(f.name); if (!m) continue;
+      if (f.created_at && now - Date.parse(f.created_at) > SESS_DIAS * 864e5){ old.push(dir + "/" + f.name); continue; }
+      remote.set(m[3], { name: f.name, seq: +m[1], taken: +m[2] });
+    }
+    if (old.length) SB.storage.from(PB).remove(old);
+    let changed = false;
+    // saiu em outro aparelho: tira daqui também
+    for (const p of [...st.photos]){
+      if (p.cloud && !remote.has(p.id) && !p.upBusy){
+        st.photos = st.photos.filter(q => q !== p); sessDel(p.id);
+        st.slots.forEach(sl => { if (sl.photoId === p.id){ sl.photoId = null; sl.zoom = 1; sl.ox = 0; sl.oy = 0; } });
+        changed = true;
+      } else if (remote.has(p.id) && !p.cloud){ p.cloud = true; }
+    }
+    // chegou de outro aparelho: baixa
+    let novas = 0;
+    for (const [id, f] of remote){
+      if (st.photos.find(p => p.id === id)) continue;
+      try{
+        const d = await SB.storage.from(PB).download(dir + "/" + f.name); if (d.error) continue;
+        const img = await decodeBlob(d.data);
+        const c = document.createElement("canvas"); c.width = img.naturalWidth || img.width; c.height = img.naturalHeight || img.height;
+        c.getContext("2d").drawImage(img, 0, 0);
+        const ph = { id, name: "foto", work: c, thumb: makeThumb(c), adj: defaultAdj(), proc: null, procKey: "", taken: f.taken, seq: f.seq, cloud: true };
+        st.photos.push(ph); novas++; changed = true;
+        const blob = await canvasBlob(c); if (blob) sessPut({ id, name: "foto", blob, thumb: ph.thumb, order: f.seq, taken: f.taken, cloud: true });
+      }catch(e){}
+    }
+    // fotos daqui que ainda não subiram
+    for (const p of st.photos) if (!p.cloud && !p.upBusy) await cloudUpload(p);
+    if (changed){
+      sortPhotos();
+      if (st.slots.every(sl => !sl.photoId) && st.photos.length) autoFill();
+      renderTray(); draw(); saveSession();
+      if (novas) toast(novas + " foto(s) chegaram de outro aparelho", 2600);
+    }
+  }catch(e){}
+  finally{ syncBusy = false; }
+}
+setInterval(() => { if (!document.hidden) syncFotos(); }, 20000);
+document.addEventListener("visibilitychange", () => { if (!document.hidden) syncFotos(); });
 let sessTimer = 0, sessRestoring = true;
 function saveSession(){
   if (sessRestoring) return;
@@ -1217,6 +1294,7 @@ async function sessSaveArt(){
   saveSession();
 }
 async function clearSession(){
+  cloudClear();
   for (const p of st.photos) sessDel(p.id);
   st.photos = []; st.slots.forEach(s => { s.photoId = null; s.zoom = 1; s.ox = 0; s.oy = 0; }); st.sel = 0;
   renderTray(); draw(); syncAdjUI(); saveSession();
@@ -1242,7 +1320,7 @@ async function restoreSession(){
         const img = await decodeBlob(r.blob);
         const c = document.createElement("canvas"); c.width = img.naturalWidth || img.width; c.height = img.naturalHeight || img.height;
         c.getContext("2d").drawImage(img, 0, 0);
-        st.photos.push({ id: r.id, name: r.name, taken: r.taken || 0, seq: r.order || 0, work: c, thumb: r.thumb, adj: Object.assign(defaultAdj(), (ss.adj || {})[r.id] || {}), proc: null, procKey: "" });
+        st.photos.push({ id: r.id, name: r.name, taken: r.taken || 0, seq: r.order || 0, work: c, thumb: r.thumb, adj: Object.assign(defaultAdj(), (ss.adj || {})[r.id] || {}), proc: null, procKey: "", cloud: !!r.cloud });
       }catch(e){ sessDel(r.id); }
     }
     st.fmt = FORMATS.find(f => f.id === ss.fmtId) || st.fmt;
@@ -3648,7 +3726,7 @@ async function loadCfg(){
   applyCfg(); renderLogoLib();
   if (!st._logoTouched && st.cfg.defaultLogoId && st.logos.find(l => l.id === st.cfg.defaultLogoId)){ st.logoId = st.cfg.defaultLogoId; applyLogoPos(); renderLogoChips(); draw(); }
 }
-async function loadAll(){ await loadLogos(); await Promise.all([loadLayouts(), loadCfg(), loadPresets(), loadSaved(), loadDone()]); if (st.isAdmin) loadTeam(false); if (fluxo.on) loadFluxo(true); }
+async function loadAll(){ setTimeout(syncFotos, 600); await loadLogos(); await Promise.all([loadLayouts(), loadCfg(), loadPresets(), loadSaved(), loadDone()]); if (st.isAdmin) loadTeam(false); if (fluxo.on) loadFluxo(true); }
 
 let mode = "in";
 function amsg(t, err){ const m = $("#aMsg"); m.textContent = t || ""; m.classList.toggle("err", !!err); }
