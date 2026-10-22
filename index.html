@@ -61,7 +61,11 @@ header h1{font-size:19px;font-weight:900;letter-spacing:-.02em;margin:0;line-hei
 header p{margin:0;font-size:12.5px;color:var(--muted);font-weight:500}
 
 /* Bottom nav */
-nav.top{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(10px + env(safe-area-inset-bottom,0px));z-index:10;display:flex;gap:2px;padding:6px;border-radius:24px;background:var(--nav);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border:1px solid var(--line);box-shadow:var(--shadow);width:min(440px,calc(100% - 20px))}
+nav.top{position:fixed;left:50%;transform:translateX(-50%);transition:transform .28s ease;bottom:calc(10px + env(safe-area-inset-bottom,0px));z-index:10;display:flex;gap:2px;padding:6px;border-radius:24px;background:var(--nav);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border:1px solid var(--line);box-shadow:var(--shadow);width:min(440px,calc(100% - 20px))}
+body.navhide nav.top{transform:translate(-50%,calc(100% + 24px + env(safe-area-inset-bottom,0px)))}
+body.navhide .dl{bottom:calc(10px + env(safe-area-inset-bottom,0px))}
+body.navhide .flink{bottom:calc(72px + env(safe-area-inset-bottom,0px))}
+.dl,.flink{transition:bottom .28s ease}
 nav.top button{position:relative;flex:1;border:0;background:transparent;padding:7px 4px 6px;border-radius:18px;color:var(--muted);cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:2px;font-size:11.5px;font-weight:700;transition:color .2s,background .2s}
 nav.top button svg.i{width:22px;height:22px}
 nav.top button[aria-selected="true"]{color:var(--accent);background:var(--accent-soft)}
@@ -647,7 +651,7 @@ nav.top button{padding-left:2px;padding-right:2px;min-width:0}
           <button class="btn small" id="curveReset">Curva reta</button>
         </div>
       </div>
-      <p class="muted">Toque na curva para criar um ponto e arraste. Toque duas vezes num controle para zerar.</p>
+      <p class="muted">Toque na curva para criar um ponto e arraste. Toque ao lado da bolinha para andar um passo, ou arraste. Toque no número para zerar.</p>
       <h3>Salvar como predefinição</h3>
       <div class="row">
         <input class="tin" id="presetName" placeholder="Nome (ex.: Filtro da igreja)" style="flex:1;min-width:170px">
@@ -1148,7 +1152,7 @@ async function fileToWork(file){
 }
 function defaultAdj(){
   return { exposure: 0, brightness: 0, contrast: 0, highlights: 0, shadows: 0, whites: 0, blacks: 0,
-    temperature: 0, tint: 0, vibrance: 0, saturation: 0, curve: [[0, 0], [1, 1]] };
+    temperature: 0, tint: 0, vibrance: 0, saturation: 0, clarity: 0, curve: [[0, 0], [1, 1]] };
 }
 $("#fileIn").addEventListener("change", async e => {
   const files = [...e.target.files]; e.target.value = "";
@@ -1437,54 +1441,133 @@ function curveLUT(pts){
   }
   return lut;
 }
-function buildLUTs(a){
-  const cl = curveLUT(a.curve);
-  const t = a.temperature / 100, ti = a.tint / 100;
-  const gains = [1 + t * .16 + ti * .04, 1 - ti * .12, 1 - t * .16 + ti * .04];
-  const ev = Math.pow(2, a.exposure), bri = a.brightness / 100, con = a.contrast / 100;
-  const hi = a.highlights / 100, sh = a.shadows / 100, wh = a.whites / 100, bl = a.blacks / 100;
-  const luts = [new Uint8ClampedArray(256), new Uint8ClampedArray(256), new Uint8ClampedArray(256)];
-  for (let c = 0; c < 3; c++){
-    for (let i = 0; i < 256; i++){
-      let x = i / 255 * gains[c] * ev;
-      if (bri) x = Math.pow(clamp(x, 0, 2), 1 - bri * .45);
-      if (bl){ const w = Math.pow(1 - clamp(x), 3); x += bl * .14 * w; }
-      if (sh){ const w = Math.max(0, 1 - x * 2.2); x += sh * .32 * w * w; }
-      if (hi){ const w = clamp((x - .45) / .55); x += hi * .32 * w * w; }
-      if (wh){ x += wh * .2 * Math.pow(clamp(x), 3); }
-      if (con) x = .5 + (x - .5) * (con > 0 ? 1 + con * .9 : 1 + con * .6);
-      x = clamp(x);
-      luts[c][i] = Math.round(cl[Math.round(x * 255)] * 255);
+/* Motor de tons no estilo Lightroom: trabalha em luz linear, move só a luminosidade
+   (a cor se mantém) e usa um mapa de brilho local suave para realces e sombras. */
+const S2L = new Float32Array(256);
+for (let i = 0; i < 256; i++){ const c = i / 255; S2L[i] = c <= .04045 ? c / 12.92 : Math.pow((c + .055) / 1.055, 2.4); }
+const LN = 8192;
+const L2S = new Uint8ClampedArray(LN + 1);
+for (let i = 0; i <= LN; i++){ const x = i / LN; L2S[i] = Math.round(255 * (x <= .0031308 ? x * 12.92 : 1.055 * Math.pow(x, 1 / 2.4) - .055)); }
+const ENC = new Float32Array(LN + 1), DEC = new Float32Array(LN + 1);
+for (let i = 0; i <= LN; i++){ const x = i / LN; ENC[i] = Math.pow(x, 1 / 2.2); DEC[i] = Math.pow(x, 2.2); }
+const enc = y => ENC[(y >= 1 ? LN : y <= 0 ? 0 : (y * LN + .5) | 0)];
+const dec = v => DEC[(v >= 1 ? LN : v <= 0 ? 0 : (v * LN + .5) | 0)];
+const sstep = (a, b, x) => { const t = x <= a ? 0 : x >= b ? 1 : (x - a) / (b - a); return t * t * (3 - 2 * t); };
+function boxBlurF(src, w, h, r){
+  const tmp = new Float32Array(w * h), out = new Float32Array(w * h), n = 2 * r + 1;
+  for (let y = 0; y < h; y++){
+    let acc = 0; const o = y * w;
+    for (let k = -r; k <= r; k++) acc += src[o + Math.min(w - 1, Math.max(0, k))];
+    for (let x = 0; x < w; x++){
+      tmp[o + x] = acc / n;
+      acc += src[o + Math.min(w - 1, x + r + 1)] - src[o + Math.max(0, x - r)];
     }
   }
-  return luts;
+  for (let x = 0; x < w; x++){
+    let acc = 0;
+    for (let k = -r; k <= r; k++) acc += tmp[Math.min(h - 1, Math.max(0, k)) * w + x];
+    for (let y = 0; y < h; y++){
+      out[y * w + x] = acc / n;
+      acc += tmp[Math.min(h - 1, y + r + 1) * w + x] - tmp[Math.max(0, y - r) * w + x];
+    }
+  }
+  return out;
+}
+/* mapa de brilho local (luz linear, bem borrado), calculado uma vez por foto */
+function lumaMap(photo){
+  const src = photo.work;
+  if (photo.lmap && photo.lmapSrc === src) return photo.lmap;
+  const s = Math.min(1, 200 / Math.max(src.width, src.height));
+  const w = Math.max(2, Math.round(src.width * s)), h = Math.max(2, Math.round(src.height * s));
+  const c = document.createElement("canvas"); c.width = w; c.height = h;
+  const ctx = c.getContext("2d", { willReadFrequently: true }); ctx.drawImage(src, 0, 0, w, h);
+  const d = ctx.getImageData(0, 0, w, h).data, y = new Float32Array(w * h);
+  for (let i = 0, j = 0; i < d.length; i += 4, j++) y[j] = .2126 * S2L[d[i]] + .7152 * S2L[d[i + 1]] + .0722 * S2L[d[i + 2]];
+  const r = Math.max(2, Math.round(Math.max(w, h) * .045));
+  let m = boxBlurF(y, w, h, r); m = boxBlurF(m, w, h, r);
+  photo.lmap = { w, h, d: m }; photo.lmapSrc = src;
+  return photo.lmap;
 }
 function isNeutral(a){
   const d = defaultAdj();
-  for (const k in d){ if (k === "curve") continue; if (a[k] !== d[k]) return false; }
+  for (const k in d){ if (k === "curve") continue; if ((a[k] || 0) !== d[k]) return false; }
   return a.curve.length === 2 && a.curve[0][0] === 0 && a.curve[0][1] === 0 && a.curve[1][0] === 1 && a.curve[1][1] === 1;
 }
+/* ao arrastar um controle, mostra uma prévia menor (rápida) e refaz em tamanho cheio logo depois */
+let adjQuick = false, adjTimer = 0;
+function drawQuick(){ adjQuick = true; clearTimeout(adjTimer); adjTimer = setTimeout(() => { adjQuick = false; draw(); }, 240); draw(); }
+function smallOf(photo){
+  if (photo.small && photo.smallSrc === photo.work) return photo.small;
+  const w = photo.work, s = 800 / Math.max(w.width, w.height), c = document.createElement("canvas");
+  c.width = Math.max(1, Math.round(w.width * s)); c.height = Math.max(1, Math.round(w.height * s));
+  c.getContext("2d").drawImage(w, 0, 0, c.width, c.height);
+  photo.small = c; photo.smallSrc = w; return c;
+}
 function processed(photo){
-  const key = JSON.stringify(photo.adj);
+  const quick = adjQuick && Math.max(photo.work.width, photo.work.height) > 900;
+  const key = JSON.stringify(photo.adj) + (quick ? "q" : "");
   if (photo.procKey === key && photo.proc) return photo.proc;
   if (isNeutral(photo.adj)){ photo.proc = photo.work; photo.procKey = key; return photo.work; }
-  const src = photo.work, c = document.createElement("canvas");
+  const a = photo.adj, src = quick ? smallOf(photo) : photo.work, c = document.createElement("canvas");
   c.width = src.width; c.height = src.height;
   const ctx = c.getContext("2d", { willReadFrequently: true });
   ctx.drawImage(src, 0, 0);
-  const im = ctx.getImageData(0, 0, c.width, c.height), d = im.data;
-  const [lr, lg, lb] = buildLUTs(photo.adj);
-  const sat = photo.adj.saturation / 100, vib = photo.adj.vibrance / 100;
-  const doSat = sat !== 0 || vib !== 0;
-  for (let i = 0; i < d.length; i += 4){
-    let r = lr[d[i]], g = lg[d[i + 1]], b = lb[d[i + 2]];
-    if (doSat){
-      const l = .299 * r + .587 * g + .114 * b;
-      const mx = Math.max(r, g, b), mn = Math.min(r, g, b);
-      const f = 1 + sat + vib * (1 - (mx - mn) / 255);
-      r = l + (r - l) * f; g = l + (g - l) * f; b = l + (b - l) * f;
+  const im = ctx.getImageData(0, 0, c.width, c.height), d = im.data, W = c.width, H = c.height;
+  const cl = curveLUT(a.curve), cl8 = new Uint8ClampedArray(256);
+  for (let i = 0; i < 256; i++) cl8[i] = Math.round(cl[i] * 255);
+  const t = (a.temperature || 0) / 100, ti = (a.tint || 0) / 100;
+  const ev = Math.pow(2, a.exposure || 0);
+  const gr = ev * (1 + t * .16 + ti * .04), gg = ev * (1 - ti * .12), gb = ev * (1 - t * .16 + ti * .04);
+  const gl = .2126 * gr + .7152 * gg + .0722 * gb;       // ganho médio, para o mapa local
+  const sh = (a.shadows || 0) / 100, hi = (a.highlights || 0) / 100, wh = (a.whites || 0) / 100, bl = (a.blacks || 0) / 100;
+  const con = (a.contrast || 0) / 100, bri = (a.brightness || 0) / 100, cla = (a.clarity || 0) / 100;
+  const sat = (a.saturation || 0) / 100, vib = (a.vibrance || 0) / 100, doSat = sat !== 0 || vib !== 0;
+  const toneOn = sh || hi || wh || bl || con || bri || cla;
+  const aC = con > 0 ? 1 + con * 1.6 : 1 / (1 + (-con) * 1.1);
+  const gam = 1 - bri * .45;
+  const lm = toneOn ? lumaMap(photo) : null;
+  const mw = lm ? lm.w : 0, mh = lm ? lm.h : 0, md = lm ? lm.d : null;
+  const fx = lm ? (mw - 1) / Math.max(1, W - 1) : 0, fy = lm ? (mh - 1) / Math.max(1, H - 1) : 0;
+  for (let y = 0; y < H; y++){
+    let y0 = 0, y1 = 0, ty = 0;
+    if (lm){ const gy = y * fy; y0 = gy | 0; y1 = Math.min(mh - 1, y0 + 1); ty = gy - y0; }
+    for (let x = 0; x < W; x++){
+      const i = (y * W + x) * 4;
+      let r = S2L[d[i]] * gr, g = S2L[d[i + 1]] * gg, b = S2L[d[i + 2]] * gb;
+      if (toneOn){
+        const Y = .2126 * r + .7152 * g + .0722 * b;
+        if (Y > 1e-7){
+          let ml = 0;
+          { const gx = x * fx, x0 = gx | 0, x1 = Math.min(mw - 1, x0 + 1), tx = gx - x0;
+            const top = md[y0 * mw + x0] * (1 - tx) + md[y0 * mw + x1] * tx, bot = md[y1 * mw + x0] * (1 - tx) + md[y1 * mw + x1] * tx;
+            ml = (top * (1 - ty) + bot * ty) * gl; }
+          const lpP = enc(Y), lpL = enc(ml);
+          let stops = 0;
+          if (sh) stops += sh * 1.7 * (1 - sstep(.05, .62, lpL)) * (.55 + .45 * (1 - sstep(.1, .7, lpP)));
+          if (hi) stops += hi * 1.25 * (.6 * sstep(.38, 1, lpL) + .4 * sstep(.5, 1, lpP));
+          let Y2 = stops ? Y * Math.pow(2, stops) : Y;
+          let lp = enc(Y2);
+          if (bl) lp += bl * .13 * (1 - sstep(0, .32, lp));
+          if (wh) lp += wh * .13 * sstep(.55, 1, lp);
+          if (cla) lp += cla * .55 * (lp - lpL) * 4 * lp * (1 - lp);
+          lp = lp < 0 ? 0 : lp > 1 ? 1 : lp;
+          if (con){ const p1 = Math.pow(lp, aC), p2 = Math.pow(1 - lp, aC); lp = p1 + p2 > 0 ? p1 / (p1 + p2) : lp; }
+          if (bri) lp = Math.pow(lp, gam);
+          const Y3 = dec(lp), k = Y3 / Y2;
+          r *= k * (Y2 / Y); g *= k * (Y2 / Y); b *= k * (Y2 / Y);
+          // sem estourar a cor: se passou de 1, puxa para o cinza da mesma luz
+          const mx = Math.max(r, g, b);
+          if (mx > 1 && Y3 < .9995){ const f = (1 - Y3) / (mx - Y3); r = Y3 + (r - Y3) * f; g = Y3 + (g - Y3) * f; b = Y3 + (b - Y3) * f; }
+        }
+      }
+      let R = cl8[L2S[(r >= 1 ? LN : r <= 0 ? 0 : (r * LN + .5) | 0)]], G = cl8[L2S[(g >= 1 ? LN : g <= 0 ? 0 : (g * LN + .5) | 0)]], B = cl8[L2S[(b >= 1 ? LN : b <= 0 ? 0 : (b * LN + .5) | 0)]];
+      if (doSat){
+        const l = .299 * R + .587 * G + .114 * B, mx = Math.max(R, G, B), mn = Math.min(R, G, B);
+        const f = 1 + sat + vib * (1 - (mx - mn) / 255);
+        R = l + (R - l) * f; G = l + (G - l) * f; B = l + (B - l) * f;
+      }
+      d[i] = R; d[i + 1] = G; d[i + 2] = B;
     }
-    d[i] = r; d[i + 1] = g; d[i + 2] = b;
   }
   ctx.putImageData(im, 0, 0);
   photo.proc = c; photo.procKey = key;
@@ -1888,7 +1971,7 @@ $("#gap").addEventListener("input", e => { st.gap = +e.target.value; $("#gapV").
 /* ---------- Adjustments pane ---------- */
 const SLIDERS = {
   light: [["exposure", "Exposição", -2, 2, .05], ["brightness", "Brilho", -100, 100, 1], ["contrast", "Contraste", -100, 100, 1],
-    ["highlights", "Realces", -100, 100, 1], ["shadows", "Sombras", -100, 100, 1], ["whites", "Brancos", -100, 100, 1], ["blacks", "Pretos", -100, 100, 1]],
+    ["highlights", "Realces", -100, 100, 1], ["shadows", "Sombras", -100, 100, 1], ["whites", "Brancos", -100, 100, 1], ["blacks", "Pretos", -100, 100, 1], ["clarity", "Clareza", -100, 100, 1]],
   color: [["temperature", "Temperatura", -100, 100, 1], ["tint", "Matiz", -100, 100, 1], ["vibrance", "Vibração", -100, 100, 1], ["saturation", "Saturação", -100, 100, 1]],
 };
 function curPhoto(){ const s = st.slots[st.sel]; return s && st.photos.find(p => p.id === s.photoId); }
@@ -1900,11 +1983,28 @@ function buildSliders(){
       lab.innerHTML = '<span></span><input type="range"><span class="v"></span>';
       lab.firstChild.textContent = name;
       const inp = lab.querySelector("input"); inp.min = mn; inp.max = mx; inp.step = step; inp.value = 0; inp.dataset.k = k;
-      inp.addEventListener("input", () => {
-        const p = curPhoto(); if (!p) return;
-        p.adj[k] = +inp.value; lab.querySelector(".v").textContent = fmtV(k, p.adj[k]); draw();
+      const dec = step < 1 ? 2 : 0, snap = v => +clamp(Math.round(v / step) * step, mn, mx).toFixed(dec);
+      const apply = v => { const p = curPhoto(); if (!p) return; p.adj[k] = v; lab.querySelector(".v").textContent = fmtV(k, v); drawQuick(); };
+      let guard = null, tmr = 0, rep = 0;
+      const stop = () => { clearTimeout(tmr); clearInterval(rep); guard = null; };
+      const once = () => { if (!guard) return; guard.v = snap(guard.v + guard.dir * step); inp.value = guard.v; apply(guard.v); };
+      // toque na barra, ao lado da bolinha: anda um passo (segurando, repete). Arrastar a bolinha continua normal.
+      inp.addEventListener("pointerdown", e => {
+        stop(); if (inp.disabled || !curPhoto()) return;
+        const r = inp.getBoundingClientRect(), tw = 26, frac = (+inp.value - mn) / (mx - mn), cx = r.left + tw / 2 + frac * (r.width - tw);
+        if (Math.abs(e.clientX - cx) <= 24) return;
+        guard = { dir: e.clientX > cx ? 1 : -1, v: +inp.value };
+        once(); tmr = setTimeout(() => { rep = setInterval(once, 75); }, 420);
       });
-      inp.addEventListener("dblclick", () => { const p = curPhoto(); if (!p) return; p.adj[k] = 0; syncAdjUI(); draw(); });
+      ["pointerup", "pointercancel", "lostpointercapture"].forEach(ev => inp.addEventListener(ev, stop));
+      inp.addEventListener("input", () => {
+        if (guard){ inp.value = guard.v; return; }
+        apply(+inp.value);
+      });
+      const reset = () => { const p = curPhoto(); if (!p) return; stop(); p.adj[k] = 0; syncAdjUI(); draw(); };
+      inp.addEventListener("dblclick", reset);
+      lab.querySelector(".v").addEventListener("click", e => { e.preventDefault(); reset(); });
+      lab.firstChild.addEventListener("dblclick", reset);
       box.appendChild(lab);
     });
   }
@@ -1963,9 +2063,9 @@ function drawCurve(){
     const pts = p.adj.curve, [x, y] = pos(e), i = curveSel;
     if (i === 0) pts[i] = [0, y]; else if (i === pts.length - 1) pts[i] = [1, y];
     else pts[i] = [clamp(x, pts[i - 1][0] + .02, pts[i + 1][0] - .02), y];
-    drawCurve(); draw();
+    drawCurve(); drawQuick();
   });
-  const up = () => { curveDrag = false; };
+  const up = () => { curveDrag = false; draw(); };
   cv.addEventListener("pointerup", up); cv.addEventListener("pointercancel", up);
 })();
 function setCurve(pts){ const p = curPhoto(); if (!p) return; p.adj.curve = pts; curveSel = -1; drawCurve(); draw(); }
@@ -3203,6 +3303,19 @@ $("#oneSel").addEventListener("click", async () => {
 });
 
 /* ---------- Navigation ---------- */
+/* barra de baixo: some ao descer a página e volta ao subir */
+(() => {
+  let last = window.scrollY, tick = false;
+  const upd = () => {
+    tick = false;
+    const y = Math.max(0, window.scrollY), dy = y - last;
+    if (y < 80 || dy < -6) document.body.classList.remove("navhide");
+    else if (dy > 8) document.body.classList.add("navhide");
+    if (Math.abs(dy) > 6 || y < 80) last = y;
+  };
+  window.addEventListener("scroll", () => { if (!tick){ tick = true; requestAnimationFrame(upd); } }, { passive: true });
+  document.querySelector("nav.top").addEventListener("click", () => document.body.classList.remove("navhide"));
+})();
 $$("nav.top button").forEach(b => b.addEventListener("click", () => {
   $$("nav.top button").forEach(x => x.setAttribute("aria-selected", x === b));
   $$(".view").forEach(v => v.classList.toggle("on", v.id === "v-" + b.dataset.view));
