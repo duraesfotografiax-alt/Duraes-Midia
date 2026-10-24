@@ -658,6 +658,12 @@ nav.top button{padding-left:2px;padding-right:2px;min-width:0}
         <button class="btn soft" id="presetSave"><svg class="i"><use href="#i-check"/></svg>Salvar ajustes</button>
       </div>
       <p class="muted">Salva os ajustes da foto selecionada para toda a equipe usar com um toque.</p>
+      <h3>Importar do Lightroom</h3>
+      <div class="row">
+        <button class="btn soft" id="lrBtn"><svg class="i"><use href="#i-sl"/></svg>Importar preset do Lightroom</button>
+        <input type="file" id="lrIn" multiple hidden>
+      </div>
+      <p class="muted" id="lrInfo">Aceita os arquivos <b>.xmp</b> (Lightroom e Lightroom Classic atuais), <b>.lrtemplate</b> (Classic antigo) e <b>.dng</b> (preset exportado do celular). Pode escolher vários de uma vez.</p>
     </div>
 
     <div class="pane" id="p-logo">
@@ -2012,7 +2018,7 @@ function buildSliders(){
 const fmtV = (k, v) => k === "exposure" ? (v > 0 ? "+" : "") + v.toFixed(2) : (v > 0 ? "+" : "") + v;
 function syncAdjUI(){
   const p = curPhoto();
-  $("#adjTarget").textContent = p ? "Editando a foto do espaço " + (st.sel + 1) + ". Toque duas vezes num controle para zerar." : "Selecione um espaço com foto para editar.";
+  $("#adjTarget").textContent = p ? "Editando a foto do espaço " + (st.sel + 1) + ". Toque ao lado da bolinha para um passo, ou arraste." : "Selecione um espaço com foto para editar.";
   $$("#p-ajustes input[type=range]").forEach(inp => {
     const k = inp.dataset.k; inp.disabled = !p;
     const v = p ? p.adj[k] : 0; inp.value = v; inp.parentElement.querySelector(".v").textContent = fmtV(k, v);
@@ -2483,6 +2489,84 @@ $("#presetSave").addEventListener("click", async () => {
   const r = await SB.from("presets").insert({ name, adj: ph.adj });
   if (r.error) return toast("Não deu para salvar" + errHint(r.error), 3600);
   $("#presetName").value = ""; await loadPresets(); toast("Predefinição salva para toda a equipe");
+});
+
+/* ---------- Importar presets do Lightroom (.xmp, .lrtemplate, .dng) ---------- */
+function lrParse(raw, fileName){
+  let txt = String(raw);
+  const all = {};
+  let m, re;
+  re = /\bcrs:(\w+)\s*=\s*"([^"]*)"/g; while ((m = re.exec(txt))) if (!(m[1] in all)) all[m[1]] = m[2];
+  re = /<crs:(\w+)>\s*([^<\s][^<]*?)\s*<\/crs:\1>/g; while ((m = re.exec(txt))) if (!(m[1] in all)) all[m[1]] = m[2];
+  if (!Object.keys(all).length){ re = /\b(\w+)\s*=\s*(-?\d+(?:\.\d+)?)\s*[,}\n\r]/g; while ((m = re.exec(txt))) if (!(m[1] in all)) all[m[1]] = m[2]; }
+  const num = (...ks) => { for (const k of ks){ if (k in all){ const v = parseFloat(String(all[k]).replace(",", ".")); if (!isNaN(v)) return v; } } return null; };
+  const adj = defaultAdj(); let got = 0;
+  const put = (key, v, mn, mx, step) => { if (v == null) return; adj[key] = +clamp(Math.round(v / step) * step, mn, mx).toFixed(2); got++; };
+  put("exposure", num("Exposure2012", "Exposure"), -2, 2, .05);
+  put("contrast", num("Contrast2012", "Contrast"), -100, 100, 1);
+  put("highlights", num("Highlights2012", "Highlights"), -100, 100, 1);
+  put("shadows", num("Shadows2012", "Shadows"), -100, 100, 1);
+  put("whites", num("Whites2012", "Whites"), -100, 100, 1);
+  put("blacks", num("Blacks2012", "Blacks"), -100, 100, 1);
+  put("clarity", num("Clarity2012", "Clarity"), -100, 100, 1);
+  put("vibrance", num("Vibrance"), -100, 100, 1);
+  put("saturation", num("Saturation"), -100, 100, 1);
+  let tp = num("Temperature"); if (tp != null) put("temperature", Math.abs(tp) > 100 ? (tp - 5500) / 45 : tp, -100, 100, 1);
+  let tn = num("Tint"); if (tn != null) put("tint", tn * .67, -100, 100, 1);
+  // curva de tons (principal)
+  let cv = null;
+  m = txt.match(/<crs:ToneCurvePV2012>([\s\S]*?)<\/crs:ToneCurvePV2012>/);
+  if (m){ const nums = [...m[1].matchAll(/<rdf:li>\s*(-?[\d.]+)\s*,\s*(-?[\d.]+)\s*<\/rdf:li>/g)].map(x => [+x[1], +x[2]]); if (nums.length >= 2) cv = nums; }
+  if (!cv){ m = txt.match(/ToneCurvePV2012\s*=\s*\{([^}]*)\}/); if (m){ const n = (m[1].match(/-?\d+(?:\.\d+)?/g) || []).map(Number), pr = []; for (let i = 0; i + 1 < n.length; i += 2) pr.push([n[i], n[i + 1]]); if (pr.length >= 2) cv = pr; } }
+  if (cv){
+    const pts = cv.map(q => [clamp(q[0] / 255), clamp(q[1] / 255)]).sort((a, b) => a[0] - b[0]).filter((q, i, a) => !i || q[0] - a[i - 1][0] > .01);
+    const lin = pts.length === 2 && pts[0][1] === 0 && pts[1][1] === 1;
+    if (pts.length >= 2 && !lin){ adj.curve = pts; got++; }
+  }
+  // o que o app ainda não tem
+  const nz = k => { const v = num(k); return v != null && v !== 0; };
+  const lost = [];
+  const anyKey = rx => Object.keys(all).some(k => rx.test(k) && nz(k));
+  if (anyKey(/^(Hue|Saturation|Luminance)Adjustment/)) lost.push("cores por canal (HSL)");
+  if (anyKey(/^(ColorGrade|SplitTone)/)) lost.push("Color Grading");
+  if (nz("Dehaze")) lost.push("Remover neblina");
+  if (nz("Texture")) lost.push("Textura");
+  if (nz("GrainAmount")) lost.push("Granulado");
+  if (nz("PostCropVignetteAmount")) lost.push("Vinheta");
+  if (/ToneCurvePV2012(Red|Green|Blue)/.test(txt) && /<rdf:li>/.test((txt.match(/<crs:ToneCurvePV2012(Red|Green|Blue)>[\s\S]*?<\/crs:ToneCurvePV2012\1>/) || [""])[0])) lost.push("curvas por cor");
+  let name = "";
+  m = txt.match(/<crs:Name>\s*<rdf:Alt>\s*<rdf:li[^>]*>([^<]*)</); if (m) name = m[1].trim();
+  if (!name){ m = txt.match(/\btitle\s*=\s*"([^"]*)"/); if (m) name = m[1].trim(); }
+  if (!name) name = String(fileName || "Preset").replace(/\.[^.]+$/, "");
+  return { name, adj, got, lost };
+}
+async function lrReadFile(f){
+  if (/\.dng$/i.test(f.name)){
+    const t = new TextDecoder("latin1").decode(new Uint8Array(await f.arrayBuffer()));
+    const a = t.indexOf("<x:xmpmeta"), b = t.indexOf("</x:xmpmeta>");
+    return a >= 0 && b > a ? t.slice(a, b + 12) : "";
+  }
+  return await f.text();
+}
+$("#lrBtn").addEventListener("click", () => $("#lrIn").click());
+$("#lrIn").addEventListener("change", async e => {
+  const files = [...e.target.files]; e.target.value = "";
+  if (!files.length) return;
+  const info = $("#lrInfo"), ok = [], bad = [], lostAll = new Set();
+  for (const f of files){
+    try{
+      const r = lrParse(await lrReadFile(f), f.name);
+      if (!r.got){ bad.push(f.name); continue; }
+      const ins = await SB.from("presets").insert({ name: r.name, adj: r.adj });
+      if (ins.error){ bad.push(f.name); continue; }
+      ok.push(r.name); r.lost.forEach(x => lostAll.add(x));
+    }catch(err){ bad.push(f.name); }
+  }
+  await loadPresets();
+  let msg = ok.length ? "Importado" + (ok.length > 1 ? "s" : "") + ": " + ok.join(", ") + ". Toque no nome lá em cima para aplicar na foto." : "Nenhum preset foi importado.";
+  if (lostAll.size) msg += " O app ainda não tem: " + [...lostAll].join(", ") + " (esses ajustes foram ignorados).";
+  if (bad.length) msg += " Não consegui ler: " + bad.join(", ") + ".";
+  info.textContent = msg; toast(ok.length ? ok.length + " preset(s) importado(s)" : "Não deu para importar", 3200);
 });
 
 /* ---------- Library: custom layouts ---------- */
