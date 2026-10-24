@@ -1294,13 +1294,22 @@ document.addEventListener("visibilitychange", () => { if (!document.hidden) sync
 let sessTimer = 0, sessRestoring = true;
 function saveSession(){
   if (sessRestoring) return;
-  clearTimeout(sessTimer);
-  sessTimer = setTimeout(() => {
+  clearTimeout(sessTimer); sessPend = true;
+  sessTimer = setTimeout(writeSession, 400);
+}
+let sessPend = false;
+function flushSession(){ if (sessPend && !sessRestoring){ clearTimeout(sessTimer); writeSession(); } }
+document.addEventListener("visibilitychange", () => { if (document.hidden) flushSession(); });
+window.addEventListener("pagehide", flushSession);
+function writeSession(){
+  sessPend = false;
+  {
     const adj = {}; st.photos.forEach(p => { adj[p.id] = p.adj; });
     LS.set("sessao", { t: Date.now(), fmtId: st.fmt.id, layoutId: st.layoutId, gap: st.gap, sel: st.sel,
+      logoId: st.logoId, logoSize: st.logoSize, logoBottom: st.logoBottom, logoTopId: st.logoTopId, logoTopSize: st.logoTopSize, logoTopY: st.logoTopY,
       slots: st.slots.map(s => ({ photoId: s.photoId, zoom: s.zoom, ox: s.ox, oy: s.oy })), tx: st.tx, adj, order: st.photos.map(p => p.id),
       arte: art.img ? { zoom: art.zoom, ox: art.ox, oy: art.oy } : null });
-  }, 400);
+  }
 }
 async function sessSaveArt(){
   if (!art.img){ sessDel("__arte__"); return; }
@@ -1342,6 +1351,7 @@ async function restoreSession(){
     st._wantLayout = ss.layoutId;
     if (allLayouts().find(l => l.id === ss.layoutId)){ st.layoutId = ss.layoutId; st._wantLayout = null; }
     st.gap = ss.gap || 0; $("#gap").value = st.gap; $("#gapV").textContent = st.gap;
+    if (ss.logoId !== undefined){ st.logoId = ss.logoId; st.logoSize = ss.logoSize || st.logoSize; st.logoBottom = ss.logoBottom == null ? st.logoBottom : ss.logoBottom; st.logoTopId = ss.logoTopId || null; st.logoTopSize = ss.logoTopSize || st.logoTopSize; st.logoTopY = ss.logoTopY == null ? st.logoTopY : ss.logoTopY; st._logoTouched = true; }
     if (ss.tx) st.tx = Object.assign(st.tx, ss.tx);
     st.slots = (ss.slots || []).map(s => Object.assign({ zoom: 1, ox: 0, oy: 0 }, s, { photoId: st.photos.find(p => p.id === s.photoId) ? s.photoId : null }));
     st.sel = ss.sel || 0;
@@ -1995,7 +2005,7 @@ function buildSliders(){
       lab.firstChild.textContent = name;
       const inp = lab.querySelector("input"); inp.min = mn; inp.max = mx; inp.step = step; inp.value = 0; inp.dataset.k = k;
       const dec = step < 1 ? 2 : 0, snap = v => +clamp(Math.round(v / step) * step, mn, mx).toFixed(dec);
-      const apply = v => { const p = curPhoto(); if (!p) return; p.adj[k] = v; lab.querySelector(".v").textContent = fmtV(k, v); drawQuick(); };
+      const apply = v => { const p = curPhoto(); if (!p) return; p.adj[k] = v; lab.querySelector(".v").textContent = fmtV(k, v); drawQuick(); saveSession(); };
       let guard = null, tmr = 0, rep = 0;
       const stop = () => { clearTimeout(tmr); clearInterval(rep); guard = null; };
       const once = () => { if (!guard) return; guard.v = snap(guard.v + guard.dir * step); inp.value = guard.v; apply(guard.v); };
@@ -2173,7 +2183,7 @@ function setLogos(list){
   if (st.logoId && !list.find(l => l.id === st.logoId)) st.logoId = null;
   if (st.logoTopId && !list.find(l => l.id === st.logoTopId)) st.logoTopId = null;
   if (!st.logoId && !st._logoTouched){
-    const def = list.find(l => l.id === st.cfg.defaultLogoId) || list[0];
+    const def = list.find(l => l.id === LS.get("lastLogo", null)) || list.find(l => l.id === st.cfg.defaultLogoId) || list[0];
     if (def){ st.logoId = def.id; applyLogoPos(); }
   }
   renderLogoChips(); renderLogoLib(); draw();
@@ -2218,8 +2228,8 @@ function logoPicker(box, get, set){
 }
 function renderLogoChips(){
   $("#logoEmpty").hidden = st.logos.length > 0;
-  logoPicker($("#logoChips"), () => st.logoId, id => { if (id !== st.logoId) logoMark(); st.logoId = id; st._logoTouched = true; if (id) applyLogoPos(); draw(); });
-  logoPicker($("#logoTopChips"), () => st.logoTopId, id => { if (id !== st.logoTopId) logoMark(); st.logoTopId = id; if (id) applyLogoTopPos(); syncTopSliders(); draw(); });
+  logoPicker($("#logoChips"), () => st.logoId, id => { if (id !== st.logoId) logoMark(); st.logoId = id; st._logoTouched = true; LS.set("lastLogo", id || null); if (id) applyLogoPos(); draw(); saveSession(); });
+  logoPicker($("#logoTopChips"), () => st.logoTopId, id => { if (id !== st.logoTopId) logoMark(); st.logoTopId = id; if (id) applyLogoTopPos(); syncTopSliders(); draw(); saveSession(); });
   $("#logoTopBox").hidden = !st.logoTopId;
   if (typeof syncLogoAll === "function" && $("#logoAllLbl")) syncLogoAll();
 }
@@ -3927,7 +3937,7 @@ async function loadCfg(){
     st.cfg.bgAssetId = r.data.bg_path || null; st.cfg.defaultLogoId = r.data.default_logo_id || null;
   }
   applyCfg(); renderLogoLib();
-  if (!st._logoTouched && st.cfg.defaultLogoId && st.logos.find(l => l.id === st.cfg.defaultLogoId)){ st.logoId = st.cfg.defaultLogoId; applyLogoPos(); renderLogoChips(); draw(); }
+  if (!st._logoTouched && !st.logos.find(l => l.id === LS.get("lastLogo", null)) && st.cfg.defaultLogoId && st.logos.find(l => l.id === st.cfg.defaultLogoId)){ st.logoId = st.cfg.defaultLogoId; applyLogoPos(); renderLogoChips(); draw(); }
 }
 async function loadAll(){ setTimeout(syncFotos, 600); await loadLogos(); await Promise.all([loadLayouts(), loadCfg(), loadPresets(), loadSaved(), loadDone()]); if (st.isAdmin) loadTeam(false); if (fluxo.on) loadFluxo(true); }
 
