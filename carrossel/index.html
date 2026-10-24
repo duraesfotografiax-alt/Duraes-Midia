@@ -1,0 +1,452 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Carrossel PSD | Durães</title>
+<style>
+:root{--bg:#0f1115;--card:#171a21;--line:#262b36;--tx:#e8eaf0;--mut:#8b93a5;--ac:#ff8a2a;--ac2:#2a1a0c;--sel:#38bdf8}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--tx);font:14px/1.35 system-ui,Segoe UI,Roboto,sans-serif}
+button,input,select,textarea{font:inherit;color:inherit}
+.bar{display:flex;gap:8px;align-items:center;padding:8px 12px;border-bottom:1px solid var(--line);background:var(--card);flex-wrap:wrap}
+.bar h1{font-size:15px;margin:0 8px 0 0}
+.btn{border:1px solid var(--line);background:#20242e;padding:7px 12px;border-radius:9px;cursor:pointer;font-weight:600}
+.btn:hover{border-color:#3a4252}
+.btn.p{background:var(--ac);border-color:var(--ac);color:#1b1006}
+.btn:disabled{opacity:.4;cursor:default}
+.mut{color:var(--mut);font-size:12.5px}
+#app{display:grid;grid-template-columns:130px 1fr 320px;height:calc(100% - 53px)}
+#slides{overflow:auto;border-right:1px solid var(--line);padding:8px;display:flex;flex-direction:column;gap:8px}
+.sl{border:2px solid transparent;border-radius:8px;cursor:pointer;background:#000;position:relative}
+.sl.on{border-color:var(--ac)}
+.sl canvas{width:100%;display:block;border-radius:6px}
+.sl i{position:absolute;left:4px;top:4px;background:#000a;border-radius:6px;font-style:normal;font-size:11px;padding:1px 6px}
+#stage{position:relative;overflow:auto;display:flex;align-items:center;justify-content:center;background:#0a0b0e;padding:16px}
+#wrap{position:relative;box-shadow:0 8px 40px #0008;touch-action:none}
+#cv{display:block;background:repeating-conic-gradient(#2a2d36 0 25%,#20232a 0 50%) 0 0/20px 20px}
+#ov{position:absolute;left:0;top:0;pointer-events:none}
+#side{border-left:1px solid var(--line);overflow:auto;padding:10px;display:flex;flex-direction:column;gap:12px}
+.box{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px}
+.box h3{margin:0 0 8px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--mut)}
+#layers{max-height:34vh;overflow:auto;display:flex;flex-direction:column;gap:2px}
+.ly{display:flex;align-items:center;gap:6px;padding:5px 6px;border-radius:7px;cursor:pointer}
+.ly:hover{background:#20242e}.ly.on{background:var(--ac2);outline:1px solid var(--ac)}
+.ly .n{flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ly .e{width:22px;text-align:center;opacity:.8}
+.ly .e.off{opacity:.25}
+.ly small{color:var(--mut)}
+.row{display:flex;gap:8px;align-items:center;margin:6px 0}
+.row label{width:76px;color:var(--mut);font-size:12.5px}
+.row input[type=range]{flex:1}
+.row input[type=number],.row select,.row textarea,.row input[type=text]{flex:1;background:#10131a;border:1px solid var(--line);border-radius:8px;padding:6px 8px;min-width:0}
+textarea{resize:vertical;min-height:70px}
+input[type=color]{width:38px;height:30px;border:0;background:none;padding:0}
+#drop{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:10px;text-align:center;padding:30px;color:var(--mut)}
+#drop.hide{display:none}
+#msg{position:fixed;left:50%;bottom:18px;transform:translateX(-50%);background:#000c;border:1px solid var(--line);padding:9px 16px;border-radius:12px;display:none;z-index:9;max-width:90vw}
+@media(max-width:900px){#app{grid-template-columns:90px 1fr;grid-template-rows:1fr auto}#side{grid-column:1/3;border-left:0;border-top:1px solid var(--line);max-height:45vh}}
+</style>
+</head>
+<body>
+<div class="bar">
+  <h1>Carrossel PSD</h1>
+  <button class="btn p" id="bOpen">Abrir PSD</button>
+  <button class="btn" id="bFonts" title="Usa as fontes instaladas no seu computador">Carregar minhas fontes</button>
+  <button class="btn" id="bPng" disabled>Baixar slide (PNG)</button>
+  <button class="btn" id="bJpg" disabled>Baixar slide (JPG)</button>
+  <button class="btn" id="bAll" disabled>Baixar todos</button>
+  <span class="mut" id="info">Nenhum arquivo aberto.</span>
+  <input type="file" id="fPsd" accept=".psd,.psb" hidden>
+  <input type="file" id="fImg" accept="image/*" hidden>
+</div>
+<div id="app">
+  <div id="slides"></div>
+  <div id="stage">
+    <div id="wrap" hidden><canvas id="cv"></canvas><canvas id="ov"></canvas></div>
+    <div id="drop"><b style="color:var(--tx);font-size:17px">Arraste o PSD aqui</b><span>ou toque em “Abrir PSD”. O arquivo é lido só no seu computador, nada é enviado.</span></div>
+  </div>
+  <div id="side">
+    <div class="box"><h3>Camadas</h3><div id="layers"><span class="mut">Abra um PSD.</span></div></div>
+    <div class="box" id="props" hidden></div>
+  </div>
+</div>
+<div id="msg"></div>
+<script src="ag-psd.js"></script>
+<script>
+"use strict";
+const $ = s => document.querySelector(s);
+const msg = (t, ms = 3500) => { const m = $("#msg"); m.textContent = t; m.style.display = "block"; clearTimeout(msg.t); if (ms) msg.t = setTimeout(() => m.style.display = "none", ms); };
+
+/* ---------- modelo ---------- */
+let doc = null;       // {w,h,slides:[{name,rect,nodes:[...]}]}
+let cur = 0;          // slide atual
+let sel = null;       // nó selecionado
+let scale = 1;        // zoom de tela
+let fonts = [];       // [{family,full,ps,style}]
+let moveFoto = false; // modo "mexer na foto dentro da moldura"
+
+const BM = {"normal":"source-over","pass through":"source-over","multiply":"multiply","screen":"screen","overlay":"overlay","soft light":"soft-light","hard light":"hard-light","color dodge":"color-dodge","color burn":"color-burn","darken":"darken","lighten":"lighten","difference":"difference","exclusion":"exclusion","hue":"hue","saturation":"saturation","color":"color","luminosity":"luminosity","linear dodge":"lighter","linear burn":"multiply","vivid light":"hard-light","linear light":"hard-light","pin light":"source-over","darker color":"darken","lighter color":"lighten"};
+const mk = (w, h) => { const c = document.createElement("canvas"); c.width = Math.max(1, Math.round(w)); c.height = Math.max(1, Math.round(h)); return c; };
+const rgb = (c, d = "#ffffff") => { if (!c) return d; let r, g, b; if (c.fr != null) { r = c.fr * 255; g = c.fg * 255; b = c.fb * 255; } else if (c.r != null) { r = c.r; g = c.g; b = c.b; } else return d; return `rgb(${Math.round(r)},${Math.round(g)},${Math.round(b)})`; };
+const hex = (css) => { const m = css.match(/\d+/g); return m ? "#" + m.slice(0, 3).map(n => (+n).toString(16).padStart(2, "0")).join("") : "#ffffff"; };
+const uv = v => v == null ? 0 : (typeof v === "number" ? v : v.value || 0);
+
+function buildNode(l) {
+  const n = { l, name: l.name || "(sem nome)", hidden: !!l.hidden, opacity: l.opacity == null ? 1 : l.opacity, blend: l.blendMode || "normal",
+    dx: 0, dy: 0, sc: 1, rot: 0, children: null, canvas: l.canvas || null, orig: l.canvas || null, photo: null, txt: null, fx: { glow: null, shadow: null }, maskC: null };
+  if (l.children) n.children = l.children.map(buildNode);
+  n.kind = l.children ? "group" : l.text ? "text" : (l.canvas ? (l.placedLayer ? "foto" : "imagem") : "vazio");
+  if (n.kind === "text") {
+    const t = l.text, st = (t.styleRuns && t.styleRuns[0] && t.styleRuns[0].style) || {}, s0 = Object.assign({}, t.style || {}, st);
+    const tr = t.transform || [1, 0, 0, 1, l.left || 0, l.bottom || 0];
+    const ys = Math.hypot(tr[2], tr[3]) || 1;
+    const just = (t.paragraphStyle && t.paragraphStyle.justification) || (t.paragraphStyleRuns && t.paragraphStyleRuns[0] && t.paragraphStyleRuns[0].paragraphStyle && t.paragraphStyleRuns[0].paragraphStyle.justification) || "left";
+    n.txt = { text: String(t.text || "").replace(/\r\n?/g, "\n"), font: (s0.font && s0.font.name) || "Arial", size: (s0.fontSize || 40) * ys, color: hex(rgb(s0.fillColor, "#fff")),
+      align: /center/.test(just) ? "center" : /right/.test(just) ? "right" : "left", x: tr[4], y: tr[5], lead: s0.autoLeading === false && s0.leading ? s0.leading * ys : 0, track: (s0.tracking || 0) / 1000, edited: false };
+  }
+  // efeitos do Photoshop
+  const ef = l.effects;
+  if (ef && !ef.disabled) {
+    const g = ef.outerGlow; if (g && g.enabled !== false) n.fx.glow = { color: hex(rgb(g.color, "#ffffff")), size: uv(g.size) || 20, op: g.opacity == null ? .75 : g.opacity };
+    const d = Array.isArray(ef.dropShadow) ? ef.dropShadow[0] : ef.dropShadow; if (d && d.enabled !== false) { const ang = (d.angle == null ? 120 : d.angle) * Math.PI / 180, dist = uv(d.distance); n.fx.shadow = { color: hex(rgb(d.color, "#000000")), size: uv(d.size) || 10, op: d.opacity == null ? .5 : d.opacity, x: Math.round(Math.cos(Math.PI - ang) * dist), y: Math.round(Math.sin(ang) * dist) }; }
+  }
+  return n;
+}
+
+function groupBounds(n) { let b = null; (function w(x) { if (x.children) x.children.forEach(w); else if (x.canvas || x.txt) { const bb = layerBox(x); b = b ? [Math.min(b[0], bb[0]), Math.min(b[1], bb[1]), Math.max(b[2], bb[2]), Math.max(b[3], bb[3])] : bb; } })(n); return b || [0, 0, 1, 1]; }
+function layerBox(n) { const l = n.l; return [l.left || 0, l.top || 0, l.right || 0, l.bottom || 0]; }
+
+function loadDoc(psd, fileName) {
+  const W = psd.width, H = psd.height, top = (psd.children || []).map(buildNode);
+  let slides = [];
+  const ab = top.filter(n => n.l.artboard);
+  if (ab.length) slides = ab.map(n => ({ name: n.name, rect: [n.l.artboard.rect.left, n.l.artboard.rect.top, n.l.artboard.rect.right, n.l.artboard.rect.bottom], nodes: n.children || [] }));
+  else if (top.length > 1 && top.every(n => n.kind === "group")) slides = top.map(n => ({ name: n.name, rect: [0, 0, W, H], nodes: [n], group: true }));
+  else slides = [{ name: fileName, rect: [0, 0, W, H], nodes: top }];
+  slides.forEach((s, i) => { s.rect = s.rect.map(Math.round); if (!s.name) s.name = "Slide " + (i + 1); });
+  doc = { w: W, h: H, slides, name: fileName };
+  cur = 0; sel = null;
+  $("#drop").classList.add("hide"); $("#wrap").hidden = false;
+  ["#bPng", "#bJpg", "#bAll"].forEach(s => $(s).disabled = false);
+  $("#info").textContent = `${fileName} · ${slides.length} slide(s) · ${W}×${H}`;
+  buildSlides(); showSlide(0);
+}
+
+/* ---------- renderização ---------- */
+function maskedCanvas(n) {
+  const l = n.l, src = n.photo ? n.canvas : n.canvas;
+  if (!l.mask || !l.mask.canvas || l.mask.disabled) return src;
+  if (n.maskC && n.maskSrc === src) return n.maskC;
+  const m = l.mask, c = mk(src.width, src.height), x = c.getContext("2d");
+  x.drawImage(src, 0, 0);
+  // máscara em tons de cinza: usa a luminância como alfa
+  const mw = m.canvas.width, mh = m.canvas.height, mc = mk(mw, mh), mx = mc.getContext("2d");
+  const dflt = m.defaultColor == null ? 255 : m.defaultColor;
+  mx.fillStyle = `rgb(${dflt},${dflt},${dflt})`; mx.fillRect(0, 0, mw, mh); mx.drawImage(m.canvas, 0, 0);
+  const id = mx.getImageData(0, 0, mw, mh), d = id.data;
+  for (let i = 0; i < d.length; i += 4) { d[i + 3] = d[i]; d[i] = d[i + 1] = d[i + 2] = 0; }
+  mx.putImageData(id, 0, 0);
+  const ox = (m.left || 0) - (l.left || 0), oy = (m.top || 0) - (l.top || 0);
+  x.globalCompositeOperation = "destination-in"; x.drawImage(mc, ox, oy);
+  n.maskC = c; n.maskSrc = src; return c;
+}
+
+function fontCss(txt, size) {
+  const f = fonts.find(f => f.ps === txt.font || f.full === txt.font || f.family === txt.font);
+  if (f) return `${/italic|oblique/i.test(f.style) ? "italic " : ""}${styleWeight(f.style)} ${size}px "${f.family}"`;
+  return `${size}px "${txt.font}", "${txt.font.replace(/-.*$/, "")}", sans-serif`;
+}
+function styleWeight(s) { s = (s || "").toLowerCase(); return /thin|hairline/.test(s) ? 100 : /extra\s*light|ultra\s*light/.test(s) ? 200 : /light/.test(s) ? 300 : /medium/.test(s) ? 500 : /semi\s*bold|demi/.test(s) ? 600 : /extra\s*bold|ultra\s*bold/.test(s) ? 800 : /black|heavy/.test(s) ? 900 : /bold/.test(s) ? 700 : 400; }
+
+function drawText(ctx, n) {
+  const t = n.txt, lines = t.text.split("\n"), lh = t.lead || t.size * 1.2;
+  ctx.font = fontCss(t, t.size); ctx.fillStyle = t.color; ctx.textAlign = t.align; ctx.textBaseline = "alphabetic";
+  if ("letterSpacing" in ctx) ctx.letterSpacing = (t.track * t.size).toFixed(2) + "px";
+  lines.forEach((ln, i) => ctx.fillText(ln, t.x, t.y + i * lh));
+}
+
+function srcOf(n) { return n.kind === "text" && n.txt.edited ? null : (n.canvas ? maskedCanvas(n) : null); }
+function center(n) { const b = layerBox(n); return [(b[0] + b[2]) / 2, (b[1] + b[3]) / 2, b[2] - b[0], b[3] - b[1]]; }
+
+function drawLayer(ctx, n) {
+  const textOnly = n.kind === "text" && (n.txt.edited || !n.canvas);
+  const src = textOnly ? null : srcOf(n);
+  if (!src && !textOnly) return;
+  const [cx, cy, w, h] = center(n);
+  ctx.save();
+  ctx.globalAlpha *= n.opacity;
+  ctx.globalCompositeOperation = BM[n.blend] || "source-over";
+  ctx.translate(cx + n.dx, cy + n.dy); ctx.rotate(n.rot * Math.PI / 180); ctx.scale(n.sc, n.sc); ctx.translate(-cx, -cy);
+  const passes = [];
+  if (n.fx.shadow) passes.push(["shadow", n.fx.shadow]);
+  if (n.fx.glow) passes.push(["glow", n.fx.glow, 1], ["glow", n.fx.glow, 2]);
+  passes.forEach(([k, f, i]) => {
+    ctx.save();
+    if (k === "shadow") { ctx.shadowColor = hexA(f.color, f.op); ctx.shadowBlur = f.size; ctx.shadowOffsetX = f.x; ctx.shadowOffsetY = f.y; }
+    else { ctx.shadowColor = hexA(f.color, Math.min(1, f.op)); ctx.shadowBlur = f.size * (i === 1 ? 1 : .5); ctx.shadowOffsetX = ctx.shadowOffsetY = 0; }
+    if (textOnly) drawText(ctx, n); else ctx.drawImage(src, n.l.left || 0, n.l.top || 0);
+    ctx.restore();
+  });
+  if (textOnly) drawText(ctx, n); else ctx.drawImage(src, n.l.left || 0, n.l.top || 0);
+  ctx.restore();
+}
+function hexA(h, a) { const m = h.replace("#", ""); const r = parseInt(m.slice(0, 2), 16), g = parseInt(m.slice(2, 4), 16), b = parseInt(m.slice(4, 6), 16); return `rgba(${r},${g},${b},${a})`; }
+
+function renderList(ctx, nodes, W, H) {
+  // nodes: de baixo para cima. Trata máscara de recorte (clipping).
+  for (let i = 0; i < nodes.length; i++) {
+    const n = nodes[i];
+    if (n.hidden) { while (nodes[i + 1] && nodes[i + 1].l.clipping) i++; continue; }
+    const clips = []; while (nodes[i + 1] && nodes[i + 1].l.clipping) { i++; if (!nodes[i].hidden) clips.push(nodes[i]); }
+    if (clips.length) {
+      const off = mk(ctx.canvas.width, ctx.canvas.height), ox = off.getContext("2d");
+      ox.setTransform(ctx.getTransform()); drawNode(ox, n);
+      const base = mk(off.width, off.height); base.getContext("2d").drawImage(off, 0, 0);
+      clips.forEach(c => {
+        const t = mk(off.width, off.height), tx = t.getContext("2d"); tx.setTransform(ctx.getTransform()); drawNode(tx, c);
+        tx.setTransform(1, 0, 0, 1, 0, 0); tx.globalCompositeOperation = "destination-in"; tx.drawImage(base, 0, 0);
+        ox.setTransform(1, 0, 0, 1, 0, 0); ox.globalCompositeOperation = BM[c.blend] || "source-over"; ox.globalAlpha = c.opacity; ox.drawImage(t, 0, 0); ox.globalAlpha = 1; ox.globalCompositeOperation = "source-over";
+      });
+      ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.globalAlpha *= n.opacity; ctx.globalCompositeOperation = BM[n.blend] || "source-over"; ctx.drawImage(off, 0, 0); ctx.restore();
+    } else drawNode(ctx, n);
+  }
+}
+function drawNode(ctx, n) {
+  if (n.hidden) return;
+  if (n.children) {
+    const simple = (n.blend === "pass through" || n.blend === "normal") && n.opacity >= .999 && !(n.l.mask && n.l.mask.canvas) && !n.dx && !n.dy && n.sc === 1 && !n.rot;
+    if (simple) { renderList(ctx, n.children); return; }
+    const off = mk(ctx.canvas.width, ctx.canvas.height), ox = off.getContext("2d"); ox.setTransform(ctx.getTransform());
+    renderList(ox, n.children);
+    const m = ctx.getTransform(), k = m.a, gb = groupBounds(n), Dx = m.a * (gb[0] + gb[2]) / 2 + m.e, Dy = m.d * (gb[1] + gb[3]) / 2 + m.f;
+    ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.globalAlpha *= n.opacity; ctx.globalCompositeOperation = BM[n.blend] || "source-over";
+    ctx.translate(Dx + n.dx * k, Dy + n.dy * k); ctx.rotate(n.rot * Math.PI / 180); ctx.scale(n.sc, n.sc); ctx.translate(-Dx, -Dy);
+    ctx.drawImage(off, 0, 0); ctx.restore(); return;
+  }
+  drawLayer(ctx, n);
+}
+
+function renderSlide(s, k, toCanvas) {
+  const [x0, y0, x1, y1] = s.rect, w = x1 - x0, h = y1 - y0;
+  const c = toCanvas || mk(w * k, h * k), ctx = c.getContext("2d");
+  ctx.clearRect(0, 0, c.width, c.height);
+  ctx.save(); ctx.setTransform(k, 0, 0, k, -x0 * k, -y0 * k);
+  renderList(ctx, s.nodes);
+  ctx.restore(); return c;
+}
+
+/* ---------- tela ---------- */
+const cv = $("#cv"), ov = $("#ov");
+function fit() {
+  const s = doc.slides[cur], w = s.rect[2] - s.rect[0], h = s.rect[3] - s.rect[1];
+  const st = $("#stage"); scale = Math.min((st.clientWidth - 40) / w, (st.clientHeight - 40) / h, 1);
+  cv.width = ov.width = Math.round(w * scale); cv.height = ov.height = Math.round(h * scale);
+}
+let rq = 0;
+function redraw(thumb) { cancelAnimationFrame(rq); rq = requestAnimationFrame(() => { if (!doc) return; renderSlide(doc.slides[cur], scale, cv); drawSel(); if (thumb) updThumb(cur); }); }
+function drawSel() {
+  const x = ov.getContext("2d"); x.clearRect(0, 0, ov.width, ov.height);
+  if (!sel || sel.hidden) return;
+  const s = doc.slides[cur], b = selBox(sel); if (!b) return;
+  x.save(); x.strokeStyle = "#38bdf8"; x.lineWidth = 2; x.setLineDash([6, 4]);
+  x.strokeRect((b[0] - s.rect[0]) * scale, (b[1] - s.rect[1]) * scale, (b[2] - b[0]) * scale, (b[3] - b[1]) * scale); x.restore();
+}
+function selBox(n) {
+  let b;
+  if (n.children) b = groupBounds(n); else if (n.kind === "text" && n.txt.edited) { const c = mk(1, 1).getContext("2d"); c.font = fontCss(n.txt, n.txt.size); const ls = n.txt.text.split("\n"), w = Math.max(...ls.map(l => c.measureText(l).width)), lh = n.txt.lead || n.txt.size * 1.2, x = n.txt.align === "center" ? n.txt.x - w / 2 : n.txt.align === "right" ? n.txt.x - w : n.txt.x; b = [x, n.txt.y - n.txt.size, x + w, n.txt.y + (ls.length - 1) * lh + n.txt.size * .3]; } else b = layerBox(n);
+  const cx = (b[0] + b[2]) / 2, cy = (b[1] + b[3]) / 2, hw = (b[2] - b[0]) / 2 * n.sc, hh = (b[3] - b[1]) / 2 * n.sc;
+  return [cx + n.dx - hw, cy + n.dy - hh, cx + n.dx + hw, cy + n.dy + hh];
+}
+
+function buildSlides() {
+  const box = $("#slides"); box.innerHTML = "";
+  doc.slides.forEach((s, i) => {
+    const d = document.createElement("div"); d.className = "sl"; d.dataset.i = i;
+    const w = s.rect[2] - s.rect[0], h = s.rect[3] - s.rect[1], k = 220 / w, c = mk(w * k, h * k);
+    d.append(c, Object.assign(document.createElement("i"), { textContent: i + 1 }));
+    d.onclick = () => showSlide(i); box.append(d);
+    setTimeout(() => { try { renderSlide(s, k, c); } catch (e) {} }, i * 30);
+  });
+}
+function updThumb(i) { const d = $("#slides").children[i]; if (!d) return; const s = doc.slides[i], c = d.querySelector("canvas"); renderSlide(s, c.width / (s.rect[2] - s.rect[0]), c); }
+function showSlide(i) {
+  cur = i; sel = null; [...$("#slides").children].forEach((d, j) => d.classList.toggle("on", j === i));
+  fit(); redraw(); buildLayers(); showProps();
+}
+
+const ICON = { group: "📁", text: "T", foto: "🖼", imagem: "▦", vazio: "·" };
+function buildLayers() {
+  const box = $("#layers"); box.innerHTML = "";
+  const s = doc.slides[cur];
+  (function walk(nodes, depth) {
+    for (let i = nodes.length - 1; i >= 0; i--) {
+      const n = nodes[i], d = document.createElement("div");
+      d.className = "ly" + (n === sel ? " on" : ""); d.style.paddingLeft = (6 + depth * 14) + "px";
+      d.innerHTML = `<span class="e ${n.hidden ? "off" : ""}" data-eye>👁</span><span class="e">${ICON[n.kind] || ""}</span><span class="n"></span>`;
+      d.querySelector(".n").textContent = n.kind === "text" && n.txt.text ? n.txt.text.replace(/\n/g, " ").slice(0, 40) : n.name;
+      d.querySelector("[data-eye]").onclick = ev => { ev.stopPropagation(); n.hidden = !n.hidden; buildLayers(); redraw(true); };
+      d.onclick = () => select(n);
+      box.append(d);
+      if (n.children && n.l.opened !== false) walk(n.children, depth + 1);
+    }
+  })(s.nodes, 0);
+}
+function select(n) { sel = n; moveFoto = false; buildLayers(); showProps(); drawSel(); }
+
+/* seleção por clique no palco */
+function hit(px, py) {
+  const s = doc.slides[cur], X = px / scale + s.rect[0], Y = py / scale + s.rect[1];
+  let found = null;
+  (function walk(nodes) {
+    for (let i = nodes.length - 1; i >= 0 && !found; i--) {
+      const n = nodes[i]; if (n.hidden) continue;
+      if (n.children) { walk(n.children); continue; }
+      const [cx, cy] = center(n), c = Math.cos(-n.rot * Math.PI / 180), si = Math.sin(-n.rot * Math.PI / 180);
+      let lx = X - cx - n.dx, ly = Y - cy - n.dy; const rx = (lx * c - ly * si) / n.sc + cx, ry = (lx * si + ly * c) / n.sc + cy;
+      if (n.kind === "text") { const b = n.txt.edited ? selBox(n) : layerBox(n); if (X >= b[0] && X <= b[2] && Y >= b[1] && Y <= b[3]) found = n; continue; }
+      const src = n.canvas; if (!src) continue;
+      const u = Math.floor(rx - (n.l.left || 0)), v = Math.floor(ry - (n.l.top || 0));
+      if (u < 0 || v < 0 || u >= src.width || v >= src.height) continue;
+      const a = src.getContext("2d").getImageData(u, v, 1, 1).data[3];
+      if (a > 12) found = n;
+    }
+  })(s.nodes);
+  return found;
+}
+let drag = null;
+ov.parentElement.addEventListener("pointerdown", e => {
+  if (!doc) return; const r = cv.getBoundingClientRect(), px = e.clientX - r.left, py = e.clientY - r.top;
+  let n = (sel && !sel.hidden && moveFoto) ? sel : hit(px, py);
+  if (!n) { sel = null; buildLayers(); showProps(); drawSel(); return; }
+  if (n !== sel) select(n);
+  drag = { x: e.clientX, y: e.clientY, dx: n.dx, dy: n.dy, ox: n.photo ? n.photo.ox : 0, oy: n.photo ? n.photo.oy : 0 };
+  ov.parentElement.setPointerCapture(e.pointerId);
+});
+ov.parentElement.addEventListener("pointermove", e => {
+  if (!drag || !sel) return; const mx = (e.clientX - drag.x) / scale, my = (e.clientY - drag.y) / scale;
+  if (moveFoto && sel.photo) { sel.photo.ox = drag.ox + mx; sel.photo.oy = drag.oy + my; rebuildPhoto(sel); }
+  else { sel.dx = drag.dx + mx; sel.dy = drag.dy + my; }
+  redraw();
+});
+ov.parentElement.addEventListener("pointerup", () => { if (drag) { drag = null; redraw(true); } });
+ov.parentElement.addEventListener("wheel", e => {
+  if (!sel || !moveFoto || !sel.photo) return; e.preventDefault();
+  sel.photo.z = Math.max(1, Math.min(6, sel.photo.z * (e.deltaY < 0 ? 1.06 : 1 / 1.06))); rebuildPhoto(sel); redraw(true); const z = $("#pz"); if (z) z.value = sel.photo.z;
+}, { passive: false });
+window.addEventListener("resize", () => { if (doc) { fit(); redraw(); } });
+
+/* ---------- foto ---------- */
+function rebuildPhoto(n) {
+  const p = n.photo, o = n.orig, c = mk(o.width, o.height), x = c.getContext("2d");
+  const k = Math.max(o.width / p.img.width, o.height / p.img.height) * p.z, w = p.img.width * k, h = p.img.height * k;
+  x.drawImage(p.img, (o.width - w) / 2 + p.ox, (o.height - h) / 2 + p.oy, w, h);
+  x.globalCompositeOperation = "destination-in"; x.drawImage(o, 0, 0);
+  n.canvas = c; n.maskC = null;
+}
+function trocarFoto(file) {
+  const im = new Image(), u = URL.createObjectURL(file);
+  im.onload = () => { sel.photo = { img: im, ox: 0, oy: 0, z: 1 }; rebuildPhoto(sel); moveFoto = true; showProps(); redraw(true); msg("Foto trocada. Arraste para enquadrar e use a roda do mouse para dar zoom."); };
+  im.onerror = () => msg("Não consegui abrir essa imagem."); im.src = u;
+}
+
+/* ---------- propriedades ---------- */
+function showProps() {
+  const box = $("#props"); if (!sel) { box.hidden = true; return; }
+  box.hidden = false; const n = sel;
+  let h = `<h3>${n.kind === "text" ? "Texto" : n.kind === "group" ? "Grupo" : "Camada"}: <span style="text-transform:none">${esc(n.name)}</span></h3>`;
+  if (n.kind === "text") {
+    h += `<div class="row"><textarea id="pt">${esc(n.txt.text)}</textarea></div>
+    <div class="row"><label>Fonte</label><select id="pf">${fontOptions(n.txt.font)}</select></div>
+    <div class="row"><label>Tamanho</label><input type="number" id="ps" value="${Math.round(n.txt.size)}" min="4" max="1000"><input type="color" id="pc" value="${n.txt.color}"></div>
+    <div class="row"><label>Alinhar</label><select id="pa"><option value="left">Esquerda</option><option value="center">Centro</option><option value="right">Direita</option></select></div>`;
+  }
+  if (n.kind === "foto" || n.kind === "imagem") h += `<div class="row"><button class="btn p" id="pfoto" style="flex:1">Trocar foto</button></div>` +
+    (n.photo ? `<div class="row"><label>Zoom foto</label><input type="range" id="pz" min="1" max="6" step=".01" value="${n.photo.z}"></div><div class="row"><label></label><label style="width:auto"><input type="checkbox" id="pm" ${moveFoto ? "checked" : ""}> mexer na foto dentro da moldura</label></div>` : "");
+  h += `<div class="row"><label>Opacidade</label><input type="range" id="po" min="0" max="1" step=".01" value="${n.opacity}"></div>
+  <div class="row"><label>Tamanho</label><input type="range" id="pk" min=".1" max="3" step=".01" value="${n.sc}"></div>
+  <div class="row"><label>Girar</label><input type="range" id="pr" min="-180" max="180" step="1" value="${n.rot}"></div>`;
+  if (!n.children) {
+    const g = n.fx.glow, s = n.fx.shadow;
+    h += `<h3 style="margin-top:12px">Brilho e sombra</h3>
+    <div class="row"><label><input type="checkbox" id="gOn" ${g ? "checked" : ""}> Brilho</label><input type="color" id="gC" value="${g ? g.color : "#ffd27a"}"><input type="range" id="gS" min="2" max="150" value="${g ? g.size : 30}"></div>
+    <div class="row"><label>Força</label><input type="range" id="gO" min=".1" max="1" step=".01" value="${g ? g.op : .9}"></div>
+    <div class="row"><label><input type="checkbox" id="sOn" ${s ? "checked" : ""}> Sombra</label><input type="color" id="sC" value="${s ? s.color : "#000000"}"><input type="range" id="sS" min="0" max="100" value="${s ? s.size : 20}"></div>`;
+  }
+  h += `<div class="row"><label>Mistura</label><select id="pb">${["normal", "multiply", "screen", "overlay", "soft light", "hard light", "color dodge", "color burn", "darken", "lighten", "difference", "exclusion", "hue", "saturation", "color", "luminosity", "linear dodge"].map(b => `<option ${b === n.blend ? "selected" : ""}>${b}</option>`).join("")}</select></div>`;
+  box.innerHTML = h;
+  const $$ = id => box.querySelector("#" + id), on = (id, fn, ev = "input") => { const el = $$(id); if (el) el.addEventListener(ev, fn); };
+  const upd = () => { redraw(true); buildLayers(); };
+  if (n.kind === "text") {
+    $$("pa").value = n.txt.align;
+    const edit = () => { n.txt.edited = true; };
+    on("pt", e => { edit(); n.txt.text = e.target.value; redraw(true); });
+    on("pf", e => { edit(); n.txt.font = e.target.value; redraw(true); }, "change");
+    on("ps", e => { edit(); n.txt.size = +e.target.value || 10; redraw(true); });
+    on("pc", e => { edit(); n.txt.color = e.target.value; redraw(true); });
+    on("pa", e => { edit(); n.txt.align = e.target.value; redraw(true); }, "change");
+  }
+  on("pfoto", () => $("#fImg").click(), "click");
+  on("pz", e => { n.photo.z = +e.target.value; rebuildPhoto(n); redraw(true); });
+  on("pm", e => { moveFoto = e.target.checked; });
+  on("po", e => { n.opacity = +e.target.value; redraw(true); });
+  on("pk", e => { n.sc = +e.target.value; redraw(true); drawSel(); });
+  on("pr", e => { n.rot = +e.target.value; redraw(true); });
+  on("pb", e => { n.blend = e.target.value; redraw(true); }, "change");
+  const gl = () => { n.fx.glow = $$("gOn").checked ? { color: $$("gC").value, size: +$$("gS").value, op: +$$("gO").value } : null; redraw(true); };
+  ["gOn", "gC", "gS", "gO"].forEach(i => on(i, gl));
+  const sh = () => { n.fx.shadow = $$("sOn").checked ? { color: $$("sC").value, size: +$$("sS").value, op: .6, x: 4, y: 6 } : null; redraw(true); };
+  ["sOn", "sC", "sS"].forEach(i => on(i, sh));
+}
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+function fontOptions(cur) {
+  const seen = new Set(), o = [];
+  const add = (v, label) => { if (!seen.has(v)) { seen.add(v); o.push(`<option value="${esc(v)}" ${v === cur ? "selected" : ""}>${esc(label)}</option>`); } };
+  add(cur, cur + " (do PSD)");
+  fonts.forEach(f => add(f.ps || f.full, f.full));
+  ["Arial", "Georgia", "Impact", "Verdana", "Times New Roman", "Trebuchet MS", "Courier New"].forEach(f => add(f, f));
+  return o.join("");
+}
+
+$("#bFonts").onclick = async () => {
+  if (!window.queryLocalFonts) return msg("Para usar as fontes do computador, abra no Chrome ou Edge no PC.", 5000);
+  try {
+    const list = await window.queryLocalFonts();
+    fonts = list.map(f => ({ family: f.family, full: f.fullName, ps: f.postscriptName, style: f.style })).sort((a, b) => a.full.localeCompare(b.full));
+    msg(fonts.length + " fontes carregadas."); if (doc) { redraw(true); showProps(); }
+  } catch (e) { msg("Permissão das fontes não concedida."); }
+};
+
+/* ---------- abrir / exportar ---------- */
+$("#bOpen").onclick = () => $("#fPsd").click();
+$("#fPsd").onchange = e => { const f = e.target.files[0]; if (f) openFile(f); e.target.value = ""; };
+$("#fImg").onchange = e => { const f = e.target.files[0]; if (f && sel) trocarFoto(f); e.target.value = ""; };
+const stage = $("#stage");
+["dragover", "dragenter"].forEach(t => stage.addEventListener(t, e => { e.preventDefault(); }));
+stage.addEventListener("drop", e => {
+  e.preventDefault(); const f = e.dataTransfer.files[0]; if (!f) return;
+  if (/\.(psd|psb)$/i.test(f.name)) openFile(f); else if (sel && /^image\//.test(f.type)) trocarFoto(f);
+});
+async function openFile(f) {
+  try {
+    msg("Lendo " + f.name + " (" + (f.size / 1048576).toFixed(0) + " MB)… pode demorar.", 0);
+    await new Promise(r => setTimeout(r, 50));
+    const buf = await f.arrayBuffer();
+    const psd = agPsd.readPsd(buf, { skipCompositeImageData: true, skipThumbnail: true, skipLinkedFilesData: true });
+    loadDoc(psd, f.name.replace(/\.(psd|psb)$/i, "")); msg("Pronto: " + doc.slides.length + " slide(s).");
+  } catch (e) { console.error(e); msg("Não consegui abrir esse PSD: " + (e.message || e), 7000); }
+}
+function save(c, name, type, q) { c.toBlob(b => { const a = document.createElement("a"); a.href = URL.createObjectURL(b); a.download = name; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 4000); }, type, q); }
+function exportSlide(i, type) {
+  const s = doc.slides[i], c = renderSlide(s, 1);
+  if (type === "image/jpeg") { const j = mk(c.width, c.height), x = j.getContext("2d"); x.fillStyle = "#fff"; x.fillRect(0, 0, j.width, j.height); x.drawImage(c, 0, 0); save(j, `${doc.name}_${String(i + 1).padStart(2, "0")}.jpg`, type, .93); }
+  else save(c, `${doc.name}_${String(i + 1).padStart(2, "0")}.png`, type);
+}
+$("#bPng").onclick = () => exportSlide(cur, "image/png");
+$("#bJpg").onclick = () => exportSlide(cur, "image/jpeg");
+$("#bAll").onclick = async () => { for (let i = 0; i < doc.slides.length; i++) { exportSlide(i, "image/jpeg"); await new Promise(r => setTimeout(r, 600)); } msg("Baixando " + doc.slides.length + " slides."); };
+window.__dbg = { get doc() { return doc; }, get sel() { return sel; }, select, loadDoc, renderSlide, trocarFoto, hit, get cur() { return cur; }, openFile };
+</script>
+</body>
+</html>
