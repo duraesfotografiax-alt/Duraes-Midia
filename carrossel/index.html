@@ -22,14 +22,22 @@ button,input,select,textarea{font:inherit;color:inherit}
 .sl.on{border-color:var(--ac)}
 .sl canvas{width:100%;display:block;border-radius:6px}
 .sl i{position:absolute;left:4px;top:4px;background:#000a;border-radius:6px;font-style:normal;font-size:11px;padding:1px 6px}
-#stage{position:relative;overflow:auto;display:flex;align-items:center;justify-content:center;background:#0a0b0e;padding:16px}
-#wrap{position:relative;box-shadow:0 8px 40px #0008;touch-action:none}
+#stage{position:relative;overflow:hidden;background:#0a0b0e;touch-action:none;user-select:none;-webkit-user-select:none;overscroll-behavior:contain}
+#wrap{position:absolute;left:0;top:0;transform-origin:0 0;box-shadow:0 8px 40px #0008}
 #cv{display:block;background:repeating-conic-gradient(#2a2d36 0 25%,#20232a 0 50%) 0 0/20px 20px}
 #ov{position:absolute;left:0;top:0;pointer-events:none}
+.zbar{position:absolute;left:50%;bottom:14px;transform:translateX(-50%);display:flex;gap:4px;background:#171a21ee;border:1px solid var(--line);border-radius:12px;padding:4px;z-index:3}
+.zbar button{border:0;background:transparent;color:var(--tx);padding:6px 10px;border-radius:8px;cursor:pointer;font-weight:700}
+.zbar button:hover{background:#262b36}.zbar span{align-self:center;min-width:46px;text-align:center;color:var(--mut);font-size:12px}
+.hint{position:absolute;left:12px;top:10px;color:#8b93a5;font-size:12px;pointer-events:none;line-height:1.5;background:#0a0b0e99;padding:4px 8px;border-radius:8px}
+.chips{display:flex;gap:6px;margin-bottom:8px}.chip{border:1px solid var(--line);background:#10131a;padding:3px 10px;border-radius:999px;cursor:pointer;font-size:12px}.chip.on{background:var(--ac);border-color:var(--ac);color:#1b1006;font-weight:700}
+#lq{width:100%;background:#10131a;border:1px solid var(--line);border-radius:8px;padding:6px 8px;margin-bottom:8px}
+.ly.dim .n{opacity:.4;text-decoration:line-through}.ly .th{width:30px;height:30px;border-radius:5px;background:#0b0d12;display:flex;align-items:center;justify-content:center;overflow:hidden;flex:none;color:var(--mut);font-weight:700;font-size:12px}.ly .th canvas{width:30px;height:30px}
+.warn{background:#3b2a0a;border:1px solid #6b4a10;color:#ffd48a;border-radius:8px;padding:6px 8px;font-size:12.5px;margin:6px 0}
 #side{border-left:1px solid var(--line);overflow:auto;padding:10px;display:flex;flex-direction:column;gap:12px}
 .box{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px}
 .box h3{margin:0 0 8px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--mut)}
-#layers{max-height:34vh;overflow:auto;display:flex;flex-direction:column;gap:2px}
+#layers{max-height:38vh;overflow:auto;display:flex;flex-direction:column;gap:2px}
 .ly{display:flex;align-items:center;gap:6px;padding:5px 6px;border-radius:7px;cursor:pointer}
 .ly:hover{background:#20242e}.ly.on{background:var(--ac2);outline:1px solid var(--ac)}
 .ly .n{flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -44,7 +52,7 @@ textarea{resize:vertical;min-height:70px}
 input[type=color]{width:38px;height:30px;border:0;background:none;padding:0}
 #drop{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:10px;text-align:center;padding:30px;color:var(--mut)}
 #drop.hide{display:none}
-#msg{position:fixed;left:50%;bottom:18px;transform:translateX(-50%);background:#000c;border:1px solid var(--line);padding:9px 16px;border-radius:12px;display:none;z-index:9;max-width:90vw}
+#msg{position:fixed;left:50%;bottom:74px;transform:translateX(-50%);background:#000c;border:1px solid var(--line);padding:9px 16px;border-radius:12px;display:none;z-index:9;max-width:90vw}
 @media(max-width:900px){#app{grid-template-columns:90px 1fr;grid-template-rows:1fr auto}#side{grid-column:1/3;border-left:0;border-top:1px solid var(--line);max-height:45vh}}
 </style>
 </head>
@@ -63,11 +71,14 @@ input[type=color]{width:38px;height:30px;border:0;background:none;padding:0}
 <div id="app">
   <div id="slides"></div>
   <div id="stage">
-    <div id="wrap" hidden><canvas id="cv"></canvas><canvas id="ov"></canvas></div>
+    <div id="wrap" hidden><canvas id="cv"></canvas></div>
+    <canvas id="ov"></canvas>
+    <div class="hint" id="hint" hidden>Roda do mouse = zoom · Espaço + arrastar = mover a área · Alt+clique = camada de baixo · Ctrl+Z desfaz</div>
+    <div class="zbar"><button id="zOut" title="Diminuir">−</button><span id="zpct">100%</span><button id="zIn" title="Aumentar">+</button><button id="zFit">Ajustar</button><button id="z100">100%</button></div>
     <div id="drop"><b style="color:var(--tx);font-size:17px">Arraste o PSD aqui</b><span>ou toque em “Abrir PSD”. O arquivo é lido só no seu computador, nada é enviado.</span></div>
   </div>
   <div id="side">
-    <div class="box"><h3>Camadas</h3><div id="layers"><span class="mut">Abra um PSD.</span></div></div>
+    <div class="box"><h3>Camadas <span class="mut" style="text-transform:none;letter-spacing:0">passe o mouse para localizar</span></h3><div class="chips"><span class="chip on" data-f="all">Todas</span><span class="chip" data-f="img">Imagens</span><span class="chip" data-f="txt">Textos</span></div><input id="lq" type="search" placeholder="Buscar camada ou texto"><div id="layers"><span class="mut">Abra um PSD.</span></div></div>
     <div class="box" id="props" hidden></div>
   </div>
 </div>
@@ -128,7 +139,7 @@ function loadDoc(psd, fileName) {
   slides.forEach((s, i) => { s.rect = s.rect.map(Math.round); if (!s.name) s.name = "Slide " + (i + 1); });
   doc = { w: W, h: H, slides, name: fileName };
   cur = 0; sel = null;
-  $("#drop").classList.add("hide"); $("#wrap").hidden = false;
+  $("#drop").classList.add("hide"); $("#wrap").hidden = false; $("#hint").hidden = false;
   ["#bPng", "#bJpg", "#bAll"].forEach(s => $(s).disabled = false);
   $("#info").textContent = `${fileName} · ${slides.length} slide(s) · ${W}×${H}`;
   buildSlides(); showSlide(0);
@@ -186,7 +197,7 @@ function drawText(ctx, n) {
 }
 
 function srcOf(n) { return n.kind === "text" && n.txt.edited ? null : (n.canvas ? maskedCanvas(n) : null); }
-function center(n) { const b = layerBox(n); return [(b[0] + b[2]) / 2, (b[1] + b[3]) / 2, b[2] - b[0], b[3] - b[1]]; }
+function center(n) { const b = boxOf(n); return [(b[0] + b[2]) / 2, (b[1] + b[3]) / 2, b[2] - b[0], b[3] - b[1]]; }
 
 function drawLayer(ctx, n) {
   const textOnly = n.kind === "text" && (n.txt.edited || !n.canvas);
@@ -257,29 +268,101 @@ function renderSlide(s, k, toCanvas) {
   ctx.restore(); return c;
 }
 
-/* ---------- tela ---------- */
-const cv = $("#cv"), ov = $("#ov");
+/* ---------- tela: área de trabalho com zoom próprio ---------- */
+const cv = $("#cv"), ov = $("#ov"), stageEl = $("#stage"), wrap = $("#wrap");
+const view = { x: 0, y: 0, z: 1 };
+let backQ = 1, hoverList = null, hoverCv = null, pulse = 0, spaceDown = false, curMode = null;
+const dpr = () => Math.min(2, window.devicePixelRatio || 1);
+const slideW = () => { const s = doc.slides[cur]; return s.rect[2] - s.rect[0]; };
+const slideH = () => { const s = doc.slides[cur]; return s.rect[3] - s.rect[1]; };
+
+function applyView() { wrap.style.transform = `translate(${view.x}px,${view.y}px) scale(${view.z})`; $("#zpct").textContent = Math.round(view.z * 100) + "%"; drawOverlay(); clearTimeout(applyView.t); applyView.t = setTimeout(() => { const q = bestQ(); if (Math.abs(Math.log(q / backQ)) > .18) redraw(); }, 140); }
+function bestQ() { const w = slideW(), h = slideH(); let q = Math.min(2, Math.max(.2, view.z * dpr())); q = Math.min(q, 4096 / Math.max(w, h)); return q; }
+function sizeOverlay() { const r = stageEl.getBoundingClientRect(); ov.width = Math.round(r.width); ov.height = Math.round(r.height); }
 function fit() {
-  const s = doc.slides[cur], w = s.rect[2] - s.rect[0], h = s.rect[3] - s.rect[1];
-  const st = $("#stage"); scale = Math.min((st.clientWidth - 40) / w, (st.clientHeight - 40) / h, 1);
-  cv.width = ov.width = Math.round(w * scale); cv.height = ov.height = Math.round(h * scale);
+  if (!doc) return; sizeOverlay();
+  const w = slideW(), h = slideH(), W = stageEl.clientWidth, H = stageEl.clientHeight;
+  view.z = Math.max(.03, Math.min((W - 60) / w, (H - 60) / h, 1.5)); view.x = (W - w * view.z) / 2; view.y = (H - h * view.z) / 2;
+  cv.style.width = w + "px"; cv.style.height = h + "px"; applyView();
 }
+function zoomAt(f, mx, my) {
+  const nz = Math.max(.03, Math.min(8, view.z * f)), k = nz / view.z;
+  if (mx == null) { mx = stageEl.clientWidth / 2; my = stageEl.clientHeight / 2; }
+  view.x = mx - (mx - view.x) * k; view.y = my - (my - view.y) * k; view.z = nz; applyView();
+}
+const toDoc = (cx, cy) => { const r = stageEl.getBoundingClientRect(), s = doc.slides[cur]; return [(cx - r.left - view.x) / view.z + s.rect[0], (cy - r.top - view.y) / view.z + s.rect[1]]; };
+const toScr = (X, Y) => { const s = doc.slides[cur]; return [view.x + (X - s.rect[0]) * view.z, view.y + (Y - s.rect[1]) * view.z]; };
+
 let rq = 0;
-function redraw(thumb) { cancelAnimationFrame(rq); rq = requestAnimationFrame(() => { if (!doc) return; renderSlide(doc.slides[cur], scale, cv); drawSel(); if (thumb) updThumb(cur); }); }
-function drawSel() {
-  const x = ov.getContext("2d"); x.clearRect(0, 0, ov.width, ov.height);
-  if (!sel || sel.hidden) return;
-  const s = doc.slides[cur], b = selBox(sel); if (!b) return;
-  x.save(); x.strokeStyle = "#38bdf8"; x.lineWidth = 2; x.setLineDash([6, 4]);
-  x.strokeRect((b[0] - s.rect[0]) * scale, (b[1] - s.rect[1]) * scale, (b[2] - b[0]) * scale, (b[3] - b[1]) * scale); x.restore();
-}
-function selBox(n) {
-  let b;
-  if (n.children) b = groupBounds(n); else if (n.kind === "text" && n.txt.edited) { const c = mk(1, 1).getContext("2d"); c.font = fontCss(n.txt, n.txt.size); const ls = n.txt.text.split("\n"), w = Math.max(...ls.map(l => c.measureText(l).width)), lh = n.txt.lead || n.txt.size * 1.2, x = n.txt.align === "center" ? n.txt.x - w / 2 : n.txt.align === "right" ? n.txt.x - w : n.txt.x; b = [x, n.txt.y - n.txt.size, x + w, n.txt.y + (ls.length - 1) * lh + n.txt.size * .3]; } else b = layerBox(n);
-  const cx = (b[0] + b[2]) / 2, cy = (b[1] + b[3]) / 2, hw = (b[2] - b[0]) / 2 * n.sc, hh = (b[3] - b[1]) / 2 * n.sc;
-  return [cx + n.dx - hw, cy + n.dy - hh, cx + n.dx + hw, cy + n.dy + hh];
+function redraw(thumb) {
+  cancelAnimationFrame(rq);
+  rq = requestAnimationFrame(() => {
+    if (!doc) return; const s = doc.slides[cur], q = bestQ(), w = slideW(), h = slideH();
+    const W = Math.max(1, Math.round(w * q)), H = Math.max(1, Math.round(h * q));
+    if (cv.width !== W || cv.height !== H) { cv.width = W; cv.height = H; }
+    backQ = q; renderSlide(s, W / w, cv); drawOverlay(); if (thumb) updThumb(cur);
+  });
 }
 
+/* geometria dos nós */
+function textBox(n) {
+  const t = n.txt, c = mk(1, 1).getContext("2d"); c.font = fontCss(t, t.size);
+  const ls = t.text.split("\n"), w = Math.max(10, ...ls.map(l => c.measureText(l).width)), lh = t.lead || t.size * 1.2;
+  const x = t.align === "center" ? t.x - w / 2 : t.align === "right" ? t.x - w : t.x;
+  return [x, t.y - t.size * .95, x + w, t.y + (ls.length - 1) * lh + t.size * .3];
+}
+function boxOf(n) { return n.children ? groupBounds(n) : (n.kind === "text" && n.txt.edited) ? textBox(n) : layerBox(n); }
+function polyOf(n, off) {
+  const b = boxOf(n), cx = (b[0] + b[2]) / 2, cy = (b[1] + b[3]) / 2, hw = (b[2] - b[0]) / 2 * n.sc, hh = (b[3] - b[1]) / 2 * n.sc, r = n.rot * Math.PI / 180, co = Math.cos(r), si = Math.sin(r);
+  const ox = n.dx + (off ? off[0] : 0), oy = n.dy + (off ? off[1] : 0);
+  return [[-hw, -hh], [hw, -hh], [hw, hh], [-hw, hh]].map(([x, y]) => [cx + ox + x * co - y * si, cy + oy + x * si + y * co]);
+}
+function parentOff(n) { let o = [0, 0]; (function f(nodes, acc) { for (const m of nodes) { if (m === n) { o = acc; return true; } if (m.children && f(m.children, [acc[0] + m.dx, acc[1] + m.dy])) return true; } return false; })(doc.slides[cur].nodes, [0, 0]); return o; }
+
+/* ---------- sobreposição (seleção, hover, localizar) ---------- */
+function pathPoly(x, pts) { pts.forEach(([X, Y], i) => { const [sx, sy] = toScr(X, Y); i ? x.lineTo(sx, sy) : x.moveTo(sx, sy); }); x.closePath(); }
+function labelAt(x, pts, text, color) {
+  const [sx, sy] = toScr(...pts[0]); x.font = "600 12px system-ui"; const w = x.measureText(text).width + 12;
+  const lx = Math.max(4, Math.min(ov.width - w - 4, sx)), ly = Math.max(20, sy - 6);
+  x.fillStyle = color; x.beginPath(); x.roundRect(lx, ly - 17, w, 19, 5); x.fill(); x.fillStyle = "#04121a"; x.fillText(text, lx + 6, ly - 3);
+}
+function handles(n) {
+  const P = polyOf(n, parentOff(n)).map(p => toScr(...p)), top = [(P[0][0] + P[1][0]) / 2, (P[0][1] + P[1][1]) / 2], cen = [(P[0][0] + P[2][0]) / 2, (P[0][1] + P[2][1]) / 2];
+  let ux = top[0] - cen[0], uy = top[1] - cen[1]; const L = Math.hypot(ux, uy) || 1; ux /= L; uy /= L;
+  return { P, cen, rot: [top[0] + ux * 30, top[1] + uy * 30], top };
+}
+function drawOverlay() {
+  const x = ov.getContext("2d"); x.clearRect(0, 0, ov.width, ov.height); if (!doc) return;
+  const nodeOk = n => n && !n.hidden;
+  // localizar (passando a seta na lista): escurece o resto
+  if (nodeOk(hoverList)) {
+    const pts = polyOf(hoverList, parentOff(hoverList));
+    x.save(); x.fillStyle = "rgba(0,0,0,.5)"; x.beginPath(); x.rect(0, 0, ov.width, ov.height); pathPoly(x, pts); x.fill("evenodd");
+    x.beginPath(); pathPoly(x, pts); x.strokeStyle = "#ff8a2a"; x.lineWidth = 3; x.stroke(); x.restore();
+    labelAt(x, pts, hoverList.kind === "text" ? "Texto: " + hoverList.txt.text.slice(0, 24) : hoverList.name, "#ff8a2a");
+  } else if (hoverList && hoverList.hidden) { x.fillStyle = "#000a"; x.font = "600 13px system-ui"; x.fillText("Camada escondida (clique no olho para mostrar)", 14, 24); }
+  if (nodeOk(hoverCv) && hoverCv !== sel && !drag) { const pts = polyOf(hoverCv, parentOff(hoverCv)); x.beginPath(); pathPoly(x, pts); x.strokeStyle = "rgba(56,189,248,.9)"; x.lineWidth = 1.5; x.stroke(); labelAt(x, pts, hoverCv.kind === "text" ? "Texto" : hoverCv.name, "#38bdf8"); }
+  if (nodeOk(sel)) {
+    const pts = polyOf(sel, parentOff(sel)), crop = moveFoto && sel.photo, col = crop ? "#ff8a2a" : "#38bdf8";
+    if (pulse > 0) { x.beginPath(); pathPoly(x, pts); x.fillStyle = `rgba(56,189,248,${pulse * .35})`; x.fill(); }
+    x.beginPath(); pathPoly(x, pts); x.strokeStyle = col; x.lineWidth = 2; x.setLineDash(crop ? [7, 5] : []); x.stroke(); x.setLineDash([]);
+    if (!drag || drag.type !== "pan") {
+      const h = handles(sel);
+      x.strokeStyle = col; x.beginPath(); x.moveTo(h.top[0], h.top[1]); x.lineTo(h.rot[0], h.rot[1]); x.stroke();
+      x.fillStyle = "#fff"; x.beginPath(); x.arc(h.rot[0], h.rot[1], 6, 0, 7); x.fill(); x.stroke();
+      h.P.forEach(p => { x.fillStyle = "#fff"; x.fillRect(p[0] - 5, p[1] - 5, 10, 10); x.strokeRect(p[0] - 5, p[1] - 5, 10, 10); });
+    }
+    if (crop) { x.font = "600 12px system-ui"; x.fillStyle = "#ff8a2a"; x.fillText("Enquadrando a foto: arraste, Alt+roda = zoom da foto, Esc sai", 14, ov.height - 14); }
+  }
+}
+function doPulse() { pulse = 1; (function f() { pulse -= .05; if (pulse < 0) pulse = 0; drawOverlay(); if (pulse > 0) requestAnimationFrame(f); })(); }
+function revealSel() {
+  if (!sel || sel.hidden || !doc) return; const pts = polyOf(sel, parentOff(sel)).map(p => toScr(...p));
+  const xs = pts.map(p => p[0]), ys = pts.map(p => p[1]), W = stageEl.clientWidth, H = stageEl.clientHeight;
+  if (Math.max(...xs) < 20 || Math.min(...xs) > W - 20 || Math.max(...ys) < 20 || Math.min(...ys) > H - 20) { view.x += W / 2 - (Math.min(...xs) + Math.max(...xs)) / 2; view.y += H / 2 - (Math.min(...ys) + Math.max(...ys)) / 2; applyView(); }
+}
+
+/* ---------- slides e camadas ---------- */
 let thumbJob = 0;
 async function buildSlides() {
   const box = $("#slides"); box.innerHTML = ""; const job = ++thumbJob;
@@ -291,7 +374,7 @@ async function buildSlides() {
   });
   for (let i = 0; i < doc.slides.length; i++) {
     await new Promise(r => setTimeout(r, 40)); if (job !== thumbJob) return;
-    const s = doc.slides[i], was = s.nodes.length && !!s.__keep;
+    const s = doc.slides[i];
     try { renderSlide(s, cs[i].width / (s.rect[2] - s.rect[0]), cs[i]); } catch (e) { console.warn(e); }
     if (i !== cur) releaseSlide(s);
     $("#info").textContent = doc.name + " · miniaturas " + (i + 1) + "/" + doc.slides.length;
@@ -301,70 +384,170 @@ async function buildSlides() {
 function updThumb(i) { const d = $("#slides").children[i]; if (!d) return; const s = doc.slides[i], c = d.querySelector("canvas"); renderSlide(s, c.width / (s.rect[2] - s.rect[0]), c); }
 function showSlide(i) {
   const prev = cur; cur = i; if (prev !== i && doc.slides[prev]) releaseSlide(doc.slides[prev]);
-  sel = null; [...$("#slides").children].forEach((d, j) => d.classList.toggle("on", j === i));
-  fit(); redraw(); buildLayers(); showProps();
+  sel = null; moveFoto = false; hoverList = hoverCv = null; [...$("#slides").children].forEach((d, j) => d.classList.toggle("on", j === i));
+  ensureSlide(doc.slides[i]); fit(); redraw(); buildLayers(); showProps();
 }
 
 const ICON = { group: "📁", text: "T", foto: "🖼", imagem: "▦", vazio: "·" };
+let lyFilter = "all", lyQuery = "";
+function thumbOf(n) {
+  if (n.kind === "text") return null; const src = n.canvas; if (!src) return null;
+  const c = mk(30, 30), x = c.getContext("2d"), k = Math.min(30 / src.width, 30 / src.height), w = src.width * k, h = src.height * k;
+  x.drawImage(src, (30 - w) / 2, (30 - h) / 2, w, h); return c;
+}
 function buildLayers() {
-  const box = $("#layers"); box.innerHTML = "";
-  const s = doc.slides[cur];
+  const box = $("#layers"); box.innerHTML = ""; if (!doc) return;
+  const flat = lyFilter !== "all" || lyQuery;
+  const pass = n => { if (n.children) return false; if (lyFilter === "img" && !(n.kind === "foto" || n.kind === "imagem")) return false; if (lyFilter === "txt" && n.kind !== "text") return false;
+    if (lyQuery) { const t = (n.kind === "text" ? n.txt.text + " " : "") + n.name; if (!t.toLowerCase().includes(lyQuery)) return false; } return n.kind !== "vazio" || lyFilter === "all"; };
+  let count = 0;
+  const row = (n, depth) => {
+    const d = document.createElement("div"); d.className = "ly" + (n === sel ? " on" : "") + (n.hidden ? " dim" : ""); d.style.paddingLeft = (6 + depth * 14) + "px";
+    const eye = `<span class="e ${n.hidden ? "off" : ""}" data-eye title="Mostrar/esconder (Alt+clique: só esta)">👁</span>`;
+    const arrow = n.children ? `<span class="e" data-arr>${n.collapsed ? "▸" : "▾"}</span>` : "";
+    d.innerHTML = eye + arrow + `<span class="th"></span><span class="n"></span>`;
+    const th = d.querySelector(".th"), t = thumbOf(n); if (t) th.append(t); else th.textContent = ICON[n.kind] || "";
+    d.querySelector(".n").textContent = n.kind === "text" && n.txt.text ? n.txt.text.replace(/\n/g, " ").slice(0, 40) : n.name;
+    d.querySelector("[data-eye]").onclick = ev => { ev.stopPropagation(); pushUndo();
+      if (ev.altKey) { const all = []; eachLeaf(doc.slides[cur].nodes, m => all.push(m)); const solo = all.every(m => m === n || m.hidden); all.forEach(m => m.hidden = solo ? false : m !== n); } else n.hidden = !n.hidden;
+      buildLayers(); redraw(true); };
+    const ar = d.querySelector("[data-arr]"); if (ar) ar.onclick = ev => { ev.stopPropagation(); n.collapsed = !n.collapsed; buildLayers(); };
+    d.onclick = () => { select(n); revealSel(); doPulse(); };
+    d.onmouseenter = () => { hoverList = n; drawOverlay(); }; d.onmouseleave = () => { hoverList = null; drawOverlay(); };
+    box.append(d); count++;
+  };
   (function walk(nodes, depth) {
     for (let i = nodes.length - 1; i >= 0; i--) {
-      const n = nodes[i], d = document.createElement("div");
-      d.className = "ly" + (n === sel ? " on" : ""); d.style.paddingLeft = (6 + depth * 14) + "px";
-      d.innerHTML = `<span class="e ${n.hidden ? "off" : ""}" data-eye>👁</span><span class="e">${ICON[n.kind] || ""}</span><span class="n"></span>`;
-      d.querySelector(".n").textContent = n.kind === "text" && n.txt.text ? n.txt.text.replace(/\n/g, " ").slice(0, 40) : n.name;
-      d.querySelector("[data-eye]").onclick = ev => { ev.stopPropagation(); n.hidden = !n.hidden; buildLayers(); redraw(true); };
-      d.onclick = () => select(n);
-      box.append(d);
-      if (n.children && n.l.opened !== false) walk(n.children, depth + 1);
+      const n = nodes[i];
+      if (flat) { if (n.children) walk(n.children, depth); else if (pass(n)) row(n, 0); continue; }
+      row(n, depth); if (n.children && !n.collapsed) walk(n.children, depth + 1);
     }
-  })(s.nodes, 0);
+  })(doc.slides[cur].nodes, 0);
+  if (!count) box.innerHTML = '<span class="mut">Nenhuma camada.</span>';
+  const on = box.querySelector(".ly.on"); if (on) on.scrollIntoView({ block: "nearest" });
 }
-function select(n) { sel = n; moveFoto = false; buildLayers(); showProps(); drawSel(); }
+function select(n) { sel = n; moveFoto = !!(n && n.photo && moveFoto); buildLayers(); showProps(); drawOverlay(); }
+function selectAndShow(n) { select(n); }
 
-/* seleção por clique no palco */
-function hit(px, py) {
-  const s = doc.slides[cur], X = px / scale + s.rect[0], Y = py / scale + s.rect[1];
-  let found = null;
-  (function walk(nodes) {
-    for (let i = nodes.length - 1; i >= 0 && !found; i--) {
+/* ---------- toque / mouse no palco ---------- */
+function pixelHit(n, X, Y, off) {
+  if (n.kind === "text") { const b = boxOf(n), p = rotInv(n, X - off[0], Y - off[1], b); return p[0] >= b[0] && p[0] <= b[2] && p[1] >= b[1] && p[1] <= b[3]; }
+  const src = n.canvas; if (!src) return false; const b = layerBox(n), p = rotInv(n, X - off[0], Y - off[1], b);
+  const u = Math.floor(p[0] - b[0]), v = Math.floor(p[1] - b[1]); if (u < 0 || v < 0 || u >= src.width || v >= src.height) return false;
+  return src.getContext("2d").getImageData(u, v, 1, 1).data[3] > 12;
+}
+function rotInv(n, X, Y, b) {
+  const cx = (b[0] + b[2]) / 2, cy = (b[1] + b[3]) / 2, r = -n.rot * Math.PI / 180, c = Math.cos(r), s = Math.sin(r), lx = X - cx - n.dx, ly = Y - cy - n.dy;
+  return [(lx * c - ly * s) / n.sc + cx, (lx * s + ly * c) / n.sc + cy];
+}
+function hitAll(X, Y) {
+  const out = [];
+  (function walk(nodes, off) {
+    for (let i = nodes.length - 1; i >= 0; i--) {
       const n = nodes[i]; if (n.hidden) continue;
-      if (n.children) { walk(n.children); continue; }
-      const [cx, cy] = center(n), c = Math.cos(-n.rot * Math.PI / 180), si = Math.sin(-n.rot * Math.PI / 180);
-      let lx = X - cx - n.dx, ly = Y - cy - n.dy; const rx = (lx * c - ly * si) / n.sc + cx, ry = (lx * si + ly * c) / n.sc + cy;
-      if (n.kind === "text") { const b = n.txt.edited ? selBox(n) : layerBox(n); if (X >= b[0] && X <= b[2] && Y >= b[1] && Y <= b[3]) found = n; continue; }
-      const src = n.canvas; if (!src) continue;
-      const u = Math.floor(rx - (n.l.left || 0)), v = Math.floor(ry - (n.l.top || 0));
-      if (u < 0 || v < 0 || u >= src.width || v >= src.height) continue;
-      const a = src.getContext("2d").getImageData(u, v, 1, 1).data[3];
-      if (a > 12) found = n;
+      if (n.children) { walk(n.children, [off[0] + n.dx, off[1] + n.dy]); continue; }
+      if (n.kind === "vazio") continue;
+      if (!pixelHit(n, X, Y, off)) continue;
+      if (n.l.clipping) { let j = i - 1; while (j >= 0 && nodes[j].l.clipping) j--; const base = nodes[j]; if (!base || base.hidden || base.children || !pixelHit(base, X, Y, off)) continue; }
+      out.push(n);
     }
-  })(s.nodes);
-  return found;
+  })(doc.slides[cur].nodes, [0, 0]);
+  return out;
 }
 let drag = null;
-ov.parentElement.addEventListener("pointerdown", e => {
-  if (!doc) return; const r = cv.getBoundingClientRect(), px = e.clientX - r.left, py = e.clientY - r.top;
-  let n = (sel && !sel.hidden && moveFoto) ? sel : hit(px, py);
-  if (!n) { sel = null; buildLayers(); showProps(); drawSel(); return; }
+function handleAt(cx, cy) {
+  if (!sel || sel.hidden) return null; const r = stageEl.getBoundingClientRect(), px = cx - r.left, py = cy - r.top, h = handles(sel);
+  if (Math.hypot(px - h.rot[0], py - h.rot[1]) < 11) return "rot";
+  for (const p of h.P) if (Math.abs(px - p[0]) < 10 && Math.abs(py - p[1]) < 10) return "scale";
+  return null;
+}
+stageEl.addEventListener("pointerdown", e => {
+  if (!doc || e.target.closest(".zbar")) return;
+  stageEl.setPointerCapture(e.pointerId); const [X, Y] = toDoc(e.clientX, e.clientY), r = stageEl.getBoundingClientRect();
+  const base = { x: e.clientX, y: e.clientY, vx: view.x, vy: view.y, moved: false };
+  if (e.button === 1 || spaceDown) { drag = { ...base, type: "pan" }; stageEl.style.cursor = "grabbing"; e.preventDefault(); return; }
+  const hd = handleAt(e.clientX, e.clientY);
+  if (hd && sel) { pushUndo(); const b = boxOf(sel), c = toScr((b[0] + b[2]) / 2 + sel.dx + parentOff(sel)[0], (b[1] + b[3]) / 2 + sel.dy + parentOff(sel)[1]);
+    const cx = r.left + c[0], cy = r.top + c[1]; drag = { ...base, type: hd, cx, cy, sc: sel.sc, rot: sel.rot, d0: Math.hypot(e.clientX - cx, e.clientY - cy) || 1, a0: Math.atan2(e.clientY - cy, e.clientX - cx) }; return; }
+  if (moveFoto && sel && sel.photo) { pushUndo(); drag = { ...base, type: "crop", ox: sel.photo.ox, oy: sel.photo.oy }; return; }
+  let hits = hitAll(X, Y), n = hits[0];
+  if (e.altKey && hits.length > 1) { const i = hits.indexOf(sel); n = hits[(i + 1) % hits.length]; }
+  else if (sel && !sel.hidden && hits.includes(sel) && !e.altKey) n = sel; // mantém a selecionada se clicou nela
+  if (!n) { drag = { ...base, type: "pan", empty: true }; stageEl.style.cursor = "grabbing"; return; }
+  if (n !== sel) { select(n); doPulse(); }
+  pushUndo(); drag = { ...base, type: "move", dx: n.dx, dy: n.dy };
+});
+stageEl.addEventListener("pointermove", e => {
+  if (!doc) return;
+  if (!drag) {
+    const h = handleAt(e.clientX, e.clientY); stageEl.style.cursor = spaceDown ? "grab" : h === "rot" ? "crosshair" : h === "scale" ? "nwse-resize" : moveFoto ? "move" : "default";
+    if (!h && !e.target.closest(".zbar")) { const [X, Y] = toDoc(e.clientX, e.clientY), n = hitAll(X, Y)[0] || null; if (n !== hoverCv) { hoverCv = n; drawOverlay(); } }
+    return;
+  }
+  const dxs = e.clientX - drag.x, dys = e.clientY - drag.y; if (Math.abs(dxs) + Math.abs(dys) > 3) drag.moved = true;
+  if (drag.type === "pan") { view.x = drag.vx + dxs; view.y = drag.vy + dys; applyView(); return; }
+  if (!sel) return;
+  if (drag.type === "move") { sel.dx = drag.dx + dxs / view.z; sel.dy = drag.dy + dys / view.z; }
+  else if (drag.type === "crop") { sel.photo.ox = drag.ox + dxs / view.z / sel.sc; sel.photo.oy = drag.oy + dys / view.z / sel.sc; rebuildPhoto(sel); }
+  else if (drag.type === "scale") { sel.sc = Math.max(.05, drag.sc * Math.hypot(e.clientX - drag.cx, e.clientY - drag.cy) / drag.d0); }
+  else if (drag.type === "rot") { let a = drag.rot + (Math.atan2(e.clientY - drag.cy, e.clientX - drag.cx) - drag.a0) * 180 / Math.PI; if (e.shiftKey) a = Math.round(a / 15) * 15; sel.rot = Math.round(a * 10) / 10; }
+  redraw(); syncProps();
+});
+stageEl.addEventListener("pointerup", e => {
+  if (!drag) return; const d = drag; drag = null; stageEl.style.cursor = spaceDown ? "grab" : "default";
+  if (d.type === "pan" && d.empty && !d.moved) { sel = null; moveFoto = false; buildLayers(); showProps(); }
+  if (["move", "crop", "scale", "rot"].includes(d.type)) redraw(true); drawOverlay();
+});
+stageEl.addEventListener("pointerleave", () => { if (hoverCv) { hoverCv = null; drawOverlay(); } });
+stageEl.addEventListener("dblclick", e => {
+  if (!doc || e.target.closest(".zbar")) return; const [X, Y] = toDoc(e.clientX, e.clientY), n = hitAll(X, Y)[0]; if (!n) return;
   if (n !== sel) select(n);
-  drag = { x: e.clientX, y: e.clientY, dx: n.dx, dy: n.dy, ox: n.photo ? n.photo.ox : 0, oy: n.photo ? n.photo.oy : 0 };
-  ov.parentElement.setPointerCapture(e.pointerId);
+  if (n.kind === "text") { const t = $("#pt"); if (t) { t.focus(); t.select(); } }
+  else if (n.kind === "foto" || n.kind === "imagem") { if (n.photo) { moveFoto = !moveFoto; showProps(); drawOverlay(); } else pickPhoto(n); }
 });
-ov.parentElement.addEventListener("pointermove", e => {
-  if (!drag || !sel) return; const mx = (e.clientX - drag.x) / scale, my = (e.clientY - drag.y) / scale;
-  if (moveFoto && sel.photo) { sel.photo.ox = drag.ox + mx; sel.photo.oy = drag.oy + my; rebuildPhoto(sel); }
-  else { sel.dx = drag.dx + mx; sel.dy = drag.dy + my; }
-  redraw();
-});
-ov.parentElement.addEventListener("pointerup", () => { if (drag) { drag = null; redraw(true); } });
-ov.parentElement.addEventListener("wheel", e => {
-  if (!sel || !moveFoto || !sel.photo) return; e.preventDefault();
-  sel.photo.z = Math.max(1, Math.min(6, sel.photo.z * (e.deltaY < 0 ? 1.06 : 1 / 1.06))); rebuildPhoto(sel); redraw(true); const z = $("#pz"); if (z) z.value = sel.photo.z;
+// zoom só na área de trabalho (roda, Ctrl+roda e pinça do touchpad)
+stageEl.addEventListener("wheel", e => {
+  if (!doc) return; e.preventDefault();
+  if (e.altKey && moveFoto && sel && sel.photo) { sel.photo.z = Math.max(1, Math.min(8, sel.photo.z * (e.deltaY < 0 ? 1.06 : 1 / 1.06))); rebuildPhoto(sel); redraw(true); const z = $("#pz"); if (z) z.value = sel.photo.z; return; }
+  const r = stageEl.getBoundingClientRect(), f = Math.exp(-e.deltaY * (e.ctrlKey ? .01 : .0018)); zoomAt(f, e.clientX - r.left, e.clientY - r.top);
 }, { passive: false });
-window.addEventListener("resize", () => { if (doc) { fit(); redraw(); } });
+document.addEventListener("wheel", e => { if (e.ctrlKey) e.preventDefault(); }, { passive: false });
+["gesturestart", "gesturechange"].forEach(t => document.addEventListener(t, e => e.preventDefault()));
+$("#zIn").onclick = () => zoomAt(1.25); $("#zOut").onclick = () => zoomAt(1 / 1.25); $("#zFit").onclick = () => fit();
+$("#z100").onclick = () => { const k = 1 / view.z; zoomAt(k); };
+new ResizeObserver(() => { if (doc) { sizeOverlay(); drawOverlay(); } }).observe(stageEl);
+window.addEventListener("resize", () => { if (doc) fit(); });
+
+/* teclado */
+document.addEventListener("keydown", e => {
+  const typing = /INPUT|TEXTAREA|SELECT/.test((e.target.tagName || "")); if (typing) { if (e.key === "Escape") e.target.blur(); return; }
+  if (e.code === "Space") { spaceDown = true; stageEl.style.cursor = "grab"; e.preventDefault(); return; }
+  if (!doc) return;
+  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "z") { e.preventDefault(); undo(); return; }
+  if (e.key === "Escape") { if (moveFoto) { moveFoto = false; showProps(); drawOverlay(); } else { sel = null; buildLayers(); showProps(); drawOverlay(); } return; }
+  if (e.key === "0") { fit(); return; } if (e.key === "+" || e.key === "=") { zoomAt(1.25); return; } if (e.key === "-") { zoomAt(.8); return; }
+  if (!sel) return;
+  if (e.key === "Delete" || e.key === "Backspace") { pushUndo(); sel.hidden = true; buildLayers(); redraw(true); return; }
+  const st = e.shiftKey ? 10 : 1, mv = { ArrowLeft: [-st, 0], ArrowRight: [st, 0], ArrowUp: [0, -st], ArrowDown: [0, st] }[e.key];
+  if (mv) { e.preventDefault(); keyUndo(); if (moveFoto && sel.photo) { sel.photo.ox += mv[0]; sel.photo.oy += mv[1]; rebuildPhoto(sel); } else { sel.dx += mv[0]; sel.dy += mv[1]; } redraw(true); }
+  if (e.key === "Enter" && sel.photo) { moveFoto = !moveFoto; showProps(); drawOverlay(); }
+});
+document.addEventListener("keyup", e => { if (e.code === "Space") { spaceDown = false; stageEl.style.cursor = "default"; } });
+
+/* ---------- desfazer (Ctrl+Z) ---------- */
+const undoStack = []; let lastKey = 0;
+function snapshot() {
+  const arr = []; doc.slides.forEach(s => (function w(ns) { ns.forEach(n => { arr.push([n, { dx: n.dx, dy: n.dy, sc: n.sc, rot: n.rot, opacity: n.opacity, hidden: n.hidden, blend: n.blend, txt: n.txt ? { ...n.txt } : null, glow: n.fx.glow && { ...n.fx.glow }, shadow: n.fx.shadow && { ...n.fx.shadow }, photo: n.photo ? { ...n.photo } : null }]); if (n.children) w(n.children); }); })(s.nodes));
+  return arr;
+}
+function pushUndo() { if (!doc) return; undoStack.push(snapshot()); if (undoStack.length > 40) undoStack.shift(); }
+function keyUndo() { const t = Date.now(); if (t - lastKey > 700) pushUndo(); lastKey = t; }
+function undo() {
+  const s = undoStack.pop(); if (!s) return msg("Nada para desfazer.", 1500);
+  s.forEach(([n, v]) => { n.dx = v.dx; n.dy = v.dy; n.sc = v.sc; n.rot = v.rot; n.opacity = v.opacity; n.hidden = v.hidden; n.blend = v.blend; if (v.txt) n.txt = v.txt; n.fx.glow = v.glow; n.fx.shadow = v.shadow;
+    const had = !!n.photo; n.photo = v.photo; if (n.photo) rebuildPhoto(n); else if (had) { n.canvas = n.orig; n.maskC = null; } });
+  moveFoto = moveFoto && sel && !!sel.photo; buildLayers(); showProps(); redraw(true);
+}
 
 /* ---------- foto ---------- */
 function rebuildPhoto(n) {
@@ -374,9 +557,14 @@ function rebuildPhoto(n) {
   x.globalCompositeOperation = "destination-in"; x.drawImage(o, 0, 0);
   n.canvas = c; n.maskC = null;
 }
-function trocarFoto(file) {
+function pickPhoto(n) { if (n) select(n); $("#fImg").click(); }
+function trocarFoto(file, alvo) {
+  const t = alvo || sel; if (!t) return msg("Selecione a camada da foto primeiro.");
+  const s = doc.slides[cur], cov = (t.l.right - t.l.left) * (t.l.bottom - t.l.top) / ((s.rect[2] - s.rect[0]) * (s.rect[3] - s.rect[1]));
+  if (cov > .85 && !confirm("A camada “" + t.name + "” cobre o slide inteiro (provavelmente o fundo). Trocar a foto dela mesmo assim?")) return;
+  if (t !== sel) select(t); pushUndo();
   const im = new Image(), u = URL.createObjectURL(file);
-  im.onload = () => { sel.photo = { img: im, ox: 0, oy: 0, z: 1 }; rebuildPhoto(sel); moveFoto = true; showProps(); redraw(true); msg("Foto trocada. Arraste para enquadrar e use a roda do mouse para dar zoom."); };
+  im.onload = () => { sel.photo = { img: im, ox: 0, oy: 0, z: 1 }; rebuildPhoto(sel); moveFoto = true; showProps(); redraw(true); doPulse(); msg("Foto trocada só em “" + sel.name + "”. Arraste para enquadrar, Alt+roda dá zoom na foto, Esc termina."); };
   im.onerror = () => msg("Não consegui abrir essa imagem."); im.src = u;
 }
 
@@ -391,11 +579,13 @@ function showProps() {
     <div class="row"><label>Tamanho</label><input type="number" id="ps" value="${Math.round(n.txt.size)}" min="4" max="1000"><input type="color" id="pc" value="${n.txt.color}"></div>
     <div class="row"><label>Alinhar</label><select id="pa"><option value="left">Esquerda</option><option value="center">Centro</option><option value="right">Direita</option></select></div>`;
   }
-  if (n.kind === "foto" || n.kind === "imagem") h += `<div class="row"><button class="btn p" id="pfoto" style="flex:1">Trocar foto</button></div>` +
-    (n.photo ? `<div class="row"><label>Zoom foto</label><input type="range" id="pz" min="1" max="6" step=".01" value="${n.photo.z}"></div><div class="row"><label></label><label style="width:auto"><input type="checkbox" id="pm" ${moveFoto ? "checked" : ""}> mexer na foto dentro da moldura</label></div>` : "");
+  { const sl = doc.slides[cur], cov = n.children ? 0 : (n.l.right - n.l.left) * (n.l.bottom - n.l.top) / ((sl.rect[2] - sl.rect[0]) * (sl.rect[3] - sl.rect[1])); if (cov > .85) h += `<div class="warn">Esta camada cobre o slide inteiro (provavelmente o fundo).</div>`; }
+  if (n.kind === "foto" || n.kind === "imagem") h += `<div class="row"><button class="btn p" id="pfoto" style="flex:1">Trocar foto desta camada</button></div>` +
+    (n.photo ? `<div class="row"><label>Zoom foto</label><input type="range" id="pz" min="1" max="6" step=".01" value="${n.photo.z}"></div><div class="row"><label></label><label style="width:auto"><input type="checkbox" id="pm" ${moveFoto ? "checked" : ""}> enquadrar a foto (Enter)</label></div>` : "");
   h += `<div class="row"><label>Opacidade</label><input type="range" id="po" min="0" max="1" step=".01" value="${n.opacity}"></div>
   <div class="row"><label>Tamanho</label><input type="range" id="pk" min=".1" max="3" step=".01" value="${n.sc}"></div>
-  <div class="row"><label>Girar</label><input type="range" id="pr" min="-180" max="180" step="1" value="${n.rot}"></div>`;
+  <div class="row"><label>Girar</label><input type="range" id="pr" min="-180" max="180" step="1" value="${n.rot}"></div>
+  <div class="row"><button class="btn" id="preset" style="flex:1">Voltar posição e tamanho originais</button></div>`;
   if (!n.children) {
     const g = n.fx.glow, s = n.fx.shadow;
     h += `<h3 style="margin-top:12px">Brilho e sombra</h3>
@@ -417,10 +607,11 @@ function showProps() {
     on("pa", e => { edit(); n.txt.align = e.target.value; redraw(true); }, "change");
   }
   on("pfoto", () => $("#fImg").click(), "click");
+  on("preset", () => { pushUndo(); n.dx = n.dy = 0; n.sc = 1; n.rot = 0; showProps(); redraw(true); }, "click");
   on("pz", e => { n.photo.z = +e.target.value; rebuildPhoto(n); redraw(true); });
-  on("pm", e => { moveFoto = e.target.checked; });
+  on("pm", e => { moveFoto = e.target.checked; drawOverlay(); });
   on("po", e => { n.opacity = +e.target.value; redraw(true); });
-  on("pk", e => { n.sc = +e.target.value; redraw(true); drawSel(); });
+  on("pk", e => { n.sc = +e.target.value; redraw(true); });
   on("pr", e => { n.rot = +e.target.value; redraw(true); });
   on("pb", e => { n.blend = e.target.value; redraw(true); }, "change");
   const gl = () => { n.fx.glow = $$("gOn").checked ? { color: $$("gC").value, size: +$$("gS").value, op: +$$("gO").value } : null; redraw(true); };
@@ -451,11 +642,19 @@ $("#bFonts").onclick = async () => {
 $("#bOpen").onclick = () => $("#fPsd").click();
 $("#fPsd").onchange = e => { const f = e.target.files[0]; if (f) openFile(f); e.target.value = ""; };
 $("#fImg").onchange = e => { const f = e.target.files[0]; if (f && sel) trocarFoto(f); e.target.value = ""; };
+function syncProps() { const b = $("#props"); if (!b || b.hidden || !sel) return; const k = b.querySelector("#pk"), r = b.querySelector("#pr"); if (k) k.value = sel.sc; if (r) r.value = sel.rot; }
+$("#props").addEventListener("pointerdown", () => pushUndo(), true);
+$("#props").addEventListener("keydown", () => keyUndo(), true);
+document.querySelectorAll(".chip").forEach(c => c.onclick = () => { lyFilter = c.dataset.f; document.querySelectorAll(".chip").forEach(x => x.classList.toggle("on", x === c)); buildLayers(); });
+$("#lq").oninput = e => { lyQuery = e.target.value.trim().toLowerCase(); buildLayers(); };
 const stage = $("#stage");
 ["dragover", "dragenter"].forEach(t => stage.addEventListener(t, e => { e.preventDefault(); }));
 stage.addEventListener("drop", e => {
   e.preventDefault(); const f = e.dataTransfer.files[0]; if (!f) return;
-  if (/\.(psd|psb)$/i.test(f.name)) openFile(f); else if (sel && /^image\//.test(f.type)) trocarFoto(f);
+  if (/\.(psd|psb)$/i.test(f.name)) openFile(f); else if (doc && /^image\//.test(f.type)) {
+    const [X, Y] = toDoc(e.clientX, e.clientY), alvo = hitAll(X, Y).find(n => n.kind === "foto" || n.kind === "imagem");
+    if (alvo) trocarFoto(f, alvo); else msg("Solte a foto em cima da camada que quer trocar.");
+  }
 });
 async function openFile(f) {
   try {
@@ -476,7 +675,7 @@ function exportSlide(i, type) {
 $("#bPng").onclick = () => exportSlide(cur, "image/png");
 $("#bJpg").onclick = () => exportSlide(cur, "image/jpeg");
 $("#bAll").onclick = async () => { for (let i = 0; i < doc.slides.length; i++) { exportSlide(i, "image/jpeg"); if (i !== cur) releaseSlide(doc.slides[i]); await new Promise(r => setTimeout(r, 600)); } msg("Baixando " + doc.slides.length + " slides."); };
-window.__dbg = { get doc() { return doc; }, get sel() { return sel; }, select, loadDoc, renderSlide, trocarFoto, hit, get cur() { return cur; }, openFile };
+window.__dbg = { get doc() { return doc; }, get sel() { return sel; }, select, loadDoc, renderSlide, trocarFoto, hitAll, view, get cur() { return cur; }, openFile };
 </script>
 </body>
 </html>
