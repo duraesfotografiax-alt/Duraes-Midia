@@ -94,9 +94,10 @@ const uv = v => v == null ? 0 : (typeof v === "number" ? v : v.value || 0);
 
 function buildNode(l) {
   const n = { l, name: l.name || "(sem nome)", hidden: !!l.hidden, opacity: l.opacity == null ? 1 : l.opacity, blend: l.blendMode || "normal",
-    dx: 0, dy: 0, sc: 1, rot: 0, children: null, canvas: l.canvas || null, orig: l.canvas || null, photo: null, txt: null, fx: { glow: null, shadow: null }, maskC: null };
+    dx: 0, dy: 0, sc: 1, rot: 0, children: null, canvas: null, orig: null, loaded: false, photo: null, txt: null, fx: { glow: null, shadow: null }, maskC: null };
   if (l.children) n.children = l.children.map(buildNode);
-  n.kind = l.children ? "group" : l.text ? "text" : (l.canvas ? (l.placedLayer ? "foto" : "imagem") : "vazio");
+  n.kind = l.children ? "group" : l.text ? "text" : ((l.rawData || l.canvas) && (l.right > l.left) ? (l.placedLayer ? "foto" : "imagem") : "vazio");
+  n.hasPix = !!(l.rawData || l.canvas);
   if (n.kind === "text") {
     const t = l.text, st = (t.styleRuns && t.styleRuns[0] && t.styleRuns[0].style) || {}, s0 = Object.assign({}, t.style || {}, st);
     const tr = t.transform || [1, 0, 0, 1, l.left || 0, l.bottom || 0];
@@ -114,7 +115,7 @@ function buildNode(l) {
   return n;
 }
 
-function groupBounds(n) { let b = null; (function w(x) { if (x.children) x.children.forEach(w); else if (x.canvas || x.txt) { const bb = layerBox(x); b = b ? [Math.min(b[0], bb[0]), Math.min(b[1], bb[1]), Math.max(b[2], bb[2]), Math.max(b[3], bb[3])] : bb; } })(n); return b || [0, 0, 1, 1]; }
+function groupBounds(n) { let b = null; (function w(x) { if (x.children) x.children.forEach(w); else if (x.kind !== "vazio") { const bb = layerBox(x); b = b ? [Math.min(b[0], bb[0]), Math.min(b[1], bb[1]), Math.max(b[2], bb[2]), Math.max(b[3], bb[3])] : bb; } })(n); return b || [0, 0, 1, 1]; }
 function layerBox(n) { const l = n.l; return [l.left || 0, l.top || 0, l.right || 0, l.bottom || 0]; }
 
 function loadDoc(psd, fileName) {
@@ -131,6 +132,24 @@ function loadDoc(psd, fileName) {
   ["#bPng", "#bJpg", "#bAll"].forEach(s => $(s).disabled = false);
   $("#info").textContent = `${fileName} · ${slides.length} slide(s) · ${W}×${H}`;
   buildSlides(); showSlide(0);
+}
+
+/* ---------- carga sob demanda (PSD grande) ---------- */
+function eachLeaf(nodes, fn) { nodes.forEach(n => n.children ? eachLeaf(n.children, fn) : fn(n)); }
+function ensureSlide(s) {
+  eachLeaf(s.nodes, n => {
+    if (n.loaded) return; n.loaded = true;
+    if (!n.hasPix) return;
+    try { if (!n.l.canvas && n.l.rawData) agPsd.decodeLayerPixels(n.l); } catch (e) { console.warn("camada", n.name, e); }
+    n.canvas = n.orig = n.l.canvas || null;
+  });
+}
+function releaseSlide(s) {
+  eachLeaf(s.nodes, n => {
+    if (!n.loaded || n.photo || !n.hasPix || !n.l.rawData) return;
+    n.l.canvas = null; if (n.l.mask) n.l.mask.canvas = null;
+    n.canvas = n.orig = null; n.maskC = null; n.loaded = false;
+  });
 }
 
 /* ---------- renderização ---------- */
@@ -229,6 +248,7 @@ function drawNode(ctx, n) {
 }
 
 function renderSlide(s, k, toCanvas) {
+  ensureSlide(s);
   const [x0, y0, x1, y1] = s.rect, w = x1 - x0, h = y1 - y0;
   const c = toCanvas || mk(w * k, h * k), ctx = c.getContext("2d");
   ctx.clearRect(0, 0, c.width, c.height);
@@ -260,19 +280,28 @@ function selBox(n) {
   return [cx + n.dx - hw, cy + n.dy - hh, cx + n.dx + hw, cy + n.dy + hh];
 }
 
-function buildSlides() {
-  const box = $("#slides"); box.innerHTML = "";
-  doc.slides.forEach((s, i) => {
+let thumbJob = 0;
+async function buildSlides() {
+  const box = $("#slides"); box.innerHTML = ""; const job = ++thumbJob;
+  const cs = doc.slides.map((s, i) => {
     const d = document.createElement("div"); d.className = "sl"; d.dataset.i = i;
     const w = s.rect[2] - s.rect[0], h = s.rect[3] - s.rect[1], k = 220 / w, c = mk(w * k, h * k);
     d.append(c, Object.assign(document.createElement("i"), { textContent: i + 1 }));
-    d.onclick = () => showSlide(i); box.append(d);
-    setTimeout(() => { try { renderSlide(s, k, c); } catch (e) {} }, i * 30);
+    d.onclick = () => showSlide(i); box.append(d); return c;
   });
+  for (let i = 0; i < doc.slides.length; i++) {
+    await new Promise(r => setTimeout(r, 40)); if (job !== thumbJob) return;
+    const s = doc.slides[i], was = s.nodes.length && !!s.__keep;
+    try { renderSlide(s, cs[i].width / (s.rect[2] - s.rect[0]), cs[i]); } catch (e) { console.warn(e); }
+    if (i !== cur) releaseSlide(s);
+    $("#info").textContent = doc.name + " · miniaturas " + (i + 1) + "/" + doc.slides.length;
+  }
+  $("#info").textContent = `${doc.name} · ${doc.slides.length} slide(s) · ${doc.w}×${doc.h}`;
 }
 function updThumb(i) { const d = $("#slides").children[i]; if (!d) return; const s = doc.slides[i], c = d.querySelector("canvas"); renderSlide(s, c.width / (s.rect[2] - s.rect[0]), c); }
 function showSlide(i) {
-  cur = i; sel = null; [...$("#slides").children].forEach((d, j) => d.classList.toggle("on", j === i));
+  const prev = cur; cur = i; if (prev !== i && doc.slides[prev]) releaseSlide(doc.slides[prev]);
+  sel = null; [...$("#slides").children].forEach((d, j) => d.classList.toggle("on", j === i));
   fit(); redraw(); buildLayers(); showProps();
 }
 
@@ -433,19 +462,20 @@ async function openFile(f) {
     msg("Lendo " + f.name + " (" + (f.size / 1048576).toFixed(0) + " MB)… pode demorar.", 0);
     await new Promise(r => setTimeout(r, 50));
     const buf = await f.arrayBuffer();
-    const psd = agPsd.readPsd(buf, { skipCompositeImageData: true, skipThumbnail: true, skipLinkedFilesData: true });
+    const psd = agPsd.readPsd(buf, { useRawData: true, skipCompositeImageData: true, skipThumbnail: true, skipLinkedFilesData: true, totalMemoryLimit: undefined });
     loadDoc(psd, f.name.replace(/\.(psd|psb)$/i, "")); msg("Pronto: " + doc.slides.length + " slide(s).");
   } catch (e) { console.error(e); msg("Não consegui abrir esse PSD: " + (e.message || e), 7000); }
 }
 function save(c, name, type, q) { c.toBlob(b => { const a = document.createElement("a"); a.href = URL.createObjectURL(b); a.download = name; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 4000); }, type, q); }
 function exportSlide(i, type) {
   const s = doc.slides[i], c = renderSlide(s, 1);
+  
   if (type === "image/jpeg") { const j = mk(c.width, c.height), x = j.getContext("2d"); x.fillStyle = "#fff"; x.fillRect(0, 0, j.width, j.height); x.drawImage(c, 0, 0); save(j, `${doc.name}_${String(i + 1).padStart(2, "0")}.jpg`, type, .93); }
   else save(c, `${doc.name}_${String(i + 1).padStart(2, "0")}.png`, type);
 }
 $("#bPng").onclick = () => exportSlide(cur, "image/png");
 $("#bJpg").onclick = () => exportSlide(cur, "image/jpeg");
-$("#bAll").onclick = async () => { for (let i = 0; i < doc.slides.length; i++) { exportSlide(i, "image/jpeg"); await new Promise(r => setTimeout(r, 600)); } msg("Baixando " + doc.slides.length + " slides."); };
+$("#bAll").onclick = async () => { for (let i = 0; i < doc.slides.length; i++) { exportSlide(i, "image/jpeg"); if (i !== cur) releaseSlide(doc.slides[i]); await new Promise(r => setTimeout(r, 600)); } msg("Baixando " + doc.slides.length + " slides."); };
 window.__dbg = { get doc() { return doc; }, get sel() { return sel; }, select, loadDoc, renderSlide, trocarFoto, hit, get cur() { return cur; }, openFile };
 </script>
 </body>
