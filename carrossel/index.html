@@ -52,6 +52,8 @@ textarea{resize:vertical;min-height:70px}
 input[type=color]{width:38px;height:30px;border:0;background:none;padding:0}
 #drop{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:10px;text-align:center;padding:30px;color:var(--mut)}
 #drop.hide{display:none}
+#pm{position:fixed;inset:0;background:#000b;z-index:20;display:none;align-items:center;justify-content:center}#pm.on{display:flex}#pm .in{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px;width:min(520px,92vw);max-height:80vh;overflow:auto}
+.pj{display:flex;gap:8px;align-items:center;padding:9px;border:1px solid var(--line);border-radius:10px;margin:8px 0}.pj b{display:block}.pj .g{flex:1;min-width:0}
 #msg{position:fixed;left:50%;bottom:74px;transform:translateX(-50%);background:#000c;border:1px solid var(--line);padding:9px 16px;border-radius:12px;display:none;z-index:9;max-width:90vw}
 @media(max-width:900px){#app{grid-template-columns:90px 1fr;grid-template-rows:1fr auto}#side{grid-column:1/3;border-left:0;border-top:1px solid var(--line);max-height:45vh}}
 </style>
@@ -60,6 +62,8 @@ input[type=color]{width:38px;height:30px;border:0;background:none;padding:0}
 <div class="bar">
   <h1>Carrossel PSD</h1>
   <button class="btn p" id="bOpen">Abrir PSD</button>
+  <button class="btn" id="bProj">Meus projetos</button>
+  <button class="btn" id="bSave" disabled>Salvar</button><span class="mut" id="saveSt"></span>
   <button class="btn" id="bFonts" title="Usa as fontes instaladas no seu computador">Carregar minhas fontes</button>
   <button class="btn" id="bPng" disabled>Baixar slide (PNG)</button>
   <button class="btn" id="bJpg" disabled>Baixar slide (JPG)</button>
@@ -75,13 +79,14 @@ input[type=color]{width:38px;height:30px;border:0;background:none;padding:0}
     <canvas id="ov"></canvas>
     <div class="hint" id="hint" hidden>Roda do mouse = zoom · Espaço + arrastar = mover a área · Alt+clique = camada de baixo · Ctrl+Z desfaz</div>
     <div class="zbar"><button id="zOut" title="Diminuir">−</button><span id="zpct">100%</span><button id="zIn" title="Aumentar">+</button><button id="zFit">Ajustar</button><button id="z100">100%</button></div>
-    <div id="drop"><b style="color:var(--tx);font-size:17px">Arraste o PSD aqui</b><span>ou toque em “Abrir PSD”. O arquivo é lido só no seu computador, nada é enviado.</span></div>
+    <div id="drop"><b style="color:var(--tx);font-size:17px">Arraste o PSD aqui</b><span>ou toque em “Abrir PSD”. O arquivo é lido só no seu computador, nada é enviado.</span><button class="btn p" id="dropCont" hidden></button></div>
   </div>
   <div id="side">
     <div class="box"><h3>Camadas <span class="mut" style="text-transform:none;letter-spacing:0">passe o mouse para localizar</span></h3><div class="chips"><span class="chip on" data-f="all">Todas</span><span class="chip" data-f="img">Imagens</span><span class="chip" data-f="txt">Textos</span></div><input id="lq" type="search" placeholder="Buscar camada ou texto"><div id="layers"><span class="mut">Abra um PSD.</span></div></div>
     <div class="box" id="props" hidden></div>
   </div>
 </div>
+<div id="pm"><div class="in"><h3 style="margin:0 0 4px">Meus projetos</h3><div class="mut">Ficam salvos neste computador. Para continuar, toque em Continuar.</div><div id="pl"></div><div style="text-align:right;margin-top:10px"><button class="btn" id="pc2">Fechar</button></div></div></div>
 <div id="msg"></div>
 <script src="ag-psd.js"></script>
 <script>
@@ -129,7 +134,7 @@ function buildNode(l) {
 function groupBounds(n) { let b = null; (function w(x) { if (x.children) x.children.forEach(w); else if (x.kind !== "vazio") { const bb = layerBox(x); b = b ? [Math.min(b[0], bb[0]), Math.min(b[1], bb[1]), Math.max(b[2], bb[2]), Math.max(b[3], bb[3])] : bb; } })(n); return b || [0, 0, 1, 1]; }
 function layerBox(n) { const l = n.l; return [l.left || 0, l.top || 0, l.right || 0, l.bottom || 0]; }
 
-function loadDoc(psd, fileName) {
+function loadDoc(psd, fileName, afterDoc) {
   const W = psd.width, H = psd.height, top = (psd.children || []).map(buildNode);
   let slides = [];
   const ab = top.filter(n => n.l.artboard);
@@ -138,7 +143,7 @@ function loadDoc(psd, fileName) {
   else slides = [{ name: fileName, rect: [0, 0, W, H], nodes: top }];
   slides.forEach((s, i) => { s.rect = s.rect.map(Math.round); if (!s.name) s.name = "Slide " + (i + 1); });
   doc = { w: W, h: H, slides, name: fileName };
-  cur = 0; sel = null;
+  cur = 0; sel = null; if (afterDoc) afterDoc();
   $("#drop").classList.add("hide"); $("#wrap").hidden = false; $("#hint").hidden = false;
   ["#bPng", "#bJpg", "#bAll"].forEach(s => $(s).disabled = false);
   $("#info").textContent = `${fileName} · ${slides.length} slide(s) · ${W}×${H}`;
@@ -153,7 +158,12 @@ function ensureSlide(s) {
     if (!n.hasPix) return;
     try { if (!n.l.canvas && n.l.rawData) agPsd.decodeLayerPixels(n.l); } catch (e) { console.warn("camada", n.name, e); }
     n.canvas = n.orig = n.l.canvas || null;
+    if (n.savedPhoto && !n.photo && n.canvas) applySavedPhoto(n);
   });
+}
+function applySavedPhoto(n) {
+  const sp = n.savedPhoto; n.savedPhoto = null;
+  createImageBitmap(sp.file).then(img => { n.photo = { img, file: sp.file, ox: sp.ox, oy: sp.oy, z: sp.z }; rebuildPhoto(n); redraw(true); const i = doc.slides.findIndex(s => { let f = false; eachLeaf(s.nodes, m => { if (m === n) f = true; }); return f; }); if (i >= 0 && i !== cur) updThumb(i); }).catch(() => {});
 }
 function releaseSlide(s) {
   eachLeaf(s.nodes, n => {
@@ -300,7 +310,7 @@ function redraw(thumb) {
     if (!doc) return; const s = doc.slides[cur], q = bestQ(), w = slideW(), h = slideH();
     const W = Math.max(1, Math.round(w * q)), H = Math.max(1, Math.round(h * q));
     if (cv.width !== W || cv.height !== H) { cv.width = W; cv.height = H; }
-    backQ = q; renderSlide(s, W / w, cv); drawOverlay(); if (thumb) updThumb(cur);
+    backQ = q; renderSlide(s, W / w, cv); drawOverlay(); if (thumb) { updThumb(cur); scheduleSave(); }
   });
 }
 
@@ -564,7 +574,7 @@ function trocarFoto(file, alvo) {
   if (cov > .85 && !confirm("A camada “" + t.name + "” cobre o slide inteiro (provavelmente o fundo). Trocar a foto dela mesmo assim?")) return;
   if (t !== sel) select(t); pushUndo();
   const im = new Image(), u = URL.createObjectURL(file);
-  im.onload = () => { sel.photo = { img: im, ox: 0, oy: 0, z: 1 }; rebuildPhoto(sel); moveFoto = true; showProps(); redraw(true); doPulse(); msg("Foto trocada só em “" + sel.name + "”. Arraste para enquadrar, Alt+roda dá zoom na foto, Esc termina."); };
+  im.onload = () => { sel.photo = { img: im, file, ox: 0, oy: 0, z: 1 }; rebuildPhoto(sel); moveFoto = true; showProps(); redraw(true); doPulse(); msg("Foto trocada só em “" + sel.name + "”. Arraste para enquadrar, Alt+roda dá zoom na foto, Esc termina."); };
   im.onerror = () => msg("Não consegui abrir essa imagem."); im.src = u;
 }
 
@@ -639,7 +649,7 @@ $("#bFonts").onclick = async () => {
 };
 
 /* ---------- abrir / exportar ---------- */
-$("#bOpen").onclick = () => $("#fPsd").click();
+$("#bOpen").onclick = pickPsd;
 $("#fPsd").onchange = e => { const f = e.target.files[0]; if (f) openFile(f); e.target.value = ""; };
 $("#fImg").onchange = e => { const f = e.target.files[0]; if (f && sel) trocarFoto(f); e.target.value = ""; };
 function syncProps() { const b = $("#props"); if (!b || b.hidden || !sel) return; const k = b.querySelector("#pk"), r = b.querySelector("#pr"); if (k) k.value = sel.sc; if (r) r.value = sel.rot; }
@@ -651,20 +661,88 @@ const stage = $("#stage");
 ["dragover", "dragenter"].forEach(t => stage.addEventListener(t, e => { e.preventDefault(); }));
 stage.addEventListener("drop", e => {
   e.preventDefault(); const f = e.dataTransfer.files[0]; if (!f) return;
-  if (/\.(psd|psb)$/i.test(f.name)) openFile(f); else if (doc && /^image\//.test(f.type)) {
+  if (/\.(psd|psb)$/i.test(f.name)) { const it = e.dataTransfer.items && e.dataTransfer.items[0]; (it && it.getAsFileSystemHandle ? it.getAsFileSystemHandle().catch(() => null) : Promise.resolve(null)).then(h => openFile(f, h && h.kind === "file" ? h : null)); } else if (doc && /^image\//.test(f.type)) {
     const [X, Y] = toDoc(e.clientX, e.clientY), alvo = hitAll(X, Y).find(n => n.kind === "foto" || n.kind === "imagem");
     if (alvo) trocarFoto(f, alvo); else msg("Solte a foto em cima da camada que quer trocar.");
   }
 });
-async function openFile(f) {
+async function openFile(f, handle) {
   try {
     msg("Lendo " + f.name + " (" + (f.size / 1048576).toFixed(0) + " MB)… pode demorar.", 0);
     await new Promise(r => setTimeout(r, 50));
+    const all = await dbAll().catch(() => []), found = all.find(p => p.fileName === f.name && p.size === f.size);
     const buf = await f.arrayBuffer();
     const psd = agPsd.readPsd(buf, { useRawData: true, skipCompositeImageData: true, skipThumbnail: true, skipLinkedFilesData: true, totalMemoryLimit: undefined });
-    loadDoc(psd, f.name.replace(/\.(psd|psb)$/i, "")); msg("Pronto: " + doc.slides.length + " slide(s).");
+    proj = found || { id: "p" + Date.now(), fileName: f.name, size: f.size, name: f.name.replace(/\.(psd|psb)$/i, ""), state: null };
+    if (handle) proj.handle = handle;
+    let restored = false;
+    loadDoc(psd, proj.name, () => { if (proj.state) restored = applyState(proj.state); });
+    $("#bSave").disabled = false;
+    msg(restored ? "Projeto aberto com o que você já tinha feito." : "Pronto: " + doc.slides.length + " slide(s).");
+    saveNow(true);
   } catch (e) { console.error(e); msg("Não consegui abrir esse PSD: " + (e.message || e), 7000); }
 }
+
+/* ---------- projetos salvos (IndexedDB) ---------- */
+let proj = null, saveT = 0;
+const idb = () => new Promise((res, rej) => { const r = indexedDB.open("carrossel-psd", 1); r.onupgradeneeded = () => r.result.createObjectStore("proj", { keyPath: "id" }); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); });
+const dbTx = async (mode, fn) => { const d = await idb(); return new Promise((res, rej) => { const t = d.transaction("proj", mode), st = t.objectStore("proj"), rq = fn(st); t.oncomplete = () => res(rq && rq.result); t.onerror = () => rej(t.error); t.onabort = () => rej(t.error); }); };
+const dbAll = () => dbTx("readonly", st => st.getAll()), dbPut = p => dbTx("readwrite", st => st.put(p)), dbDel = id => dbTx("readwrite", st => st.delete(id));
+function getState() {
+  const out = []; doc.slides.forEach(s => (function w(ns) { ns.forEach(n => {
+    out.push({ name: n.name, dx: n.dx, dy: n.dy, sc: n.sc, rot: n.rot, opacity: n.opacity, hidden: n.hidden, blend: n.blend, collapsed: !!n.collapsed,
+      txt: n.txt && n.txt.edited ? { ...n.txt } : null, glow: n.fx.glow && { ...n.fx.glow }, shadow: n.fx.shadow && { ...n.fx.shadow },
+      photo: n.photo ? { file: n.photo.file, ox: n.photo.ox, oy: n.photo.oy, z: n.photo.z } : (n.savedPhoto || null) });
+    if (n.children) w(n.children); }); })(s.nodes)); return out;
+}
+function applyState(st) {
+  const all = []; doc.slides.forEach(s => (function w(ns) { ns.forEach(n => { all.push(n); if (n.children) w(n.children); }); })(s.nodes));
+  if (all.length !== st.length || all.some((n, i) => n.name !== st[i].name)) { msg("Esse PSD mudou desde o último salvamento; abri sem as edições.", 6000); return false; }
+  all.forEach((n, i) => { const v = st[i]; n.dx = v.dx; n.dy = v.dy; n.sc = v.sc; n.rot = v.rot; n.opacity = v.opacity; n.hidden = v.hidden; n.blend = v.blend; n.collapsed = v.collapsed;
+    if (v.txt) n.txt = { ...v.txt }; n.fx.glow = v.glow; n.fx.shadow = v.shadow; n.savedPhoto = v.photo || null; });
+  return true;
+}
+function scheduleSave() { if (!proj || !doc) return; $("#saveSt").textContent = "alterações não salvas…"; clearTimeout(saveT); saveT = setTimeout(() => saveNow(), 4000); }
+async function saveNow(quiet) {
+  if (!proj || !doc) return; clearTimeout(saveT);
+  try { proj.state = getState(); proj.updated = Date.now(); await dbPut(proj); $("#saveSt").textContent = "Salvo " + new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }); if (quiet === false) msg("Projeto salvo.", 1500); }
+  catch (e) { console.error(e); $("#saveSt").textContent = "não consegui salvar"; if (!quiet) msg("Não consegui salvar: " + (e.message || e), 5000); }
+}
+setInterval(() => saveNow(true), 5 * 60 * 1000);   // salva sozinho a cada 5 minutos
+document.addEventListener("visibilitychange", () => { if (document.hidden) saveNow(true); });
+window.addEventListener("pagehide", () => saveNow(true));
+$("#bSave").onclick = () => saveNow(false);
+
+async function pickPsd() {
+  if (window.showOpenFilePicker) {
+    try { const [h] = await window.showOpenFilePicker({ types: [{ description: "Photoshop", accept: { "application/octet-stream": [".psd", ".psb"] } }] }); openFile(await h.getFile(), h); }
+    catch (e) { if (e.name !== "AbortError") $("#fPsd").click(); }
+  } else $("#fPsd").click();
+}
+async function renderProjects() {
+  const box = $("#pl"), list = (await dbAll().catch(() => [])).sort((a, b) => (b.updated || 0) - (a.updated || 0));
+  box.innerHTML = list.length ? "" : '<p class="mut">Nenhum projeto salvo ainda. Abra um PSD e ele fica salvo sozinho.</p>';
+  list.forEach(p => {
+    const d = document.createElement("div"); d.className = "pj";
+    d.innerHTML = `<div class="g"><b></b><span class="mut"></span></div><button class="btn p">Continuar</button><button class="btn">Excluir</button>`;
+    d.querySelector("b").textContent = p.name; d.querySelector(".mut").textContent = (p.updated ? new Date(p.updated).toLocaleString("pt-BR") : "") + " · " + (p.size / 1048576).toFixed(0) + " MB";
+    d.querySelector(".p").onclick = () => continuar(p);
+    d.querySelectorAll(".btn")[1].onclick = async () => { if (confirm("Excluir o projeto “" + p.name + "” salvo? O arquivo PSD não é apagado.")) { await dbDel(p.id); renderProjects(); } };
+    box.append(d);
+  });
+}
+async function continuar(p) {
+  try {
+    if (p.handle) {
+      let perm = await p.handle.queryPermission({ mode: "read" }); if (perm !== "granted") perm = await p.handle.requestPermission({ mode: "read" });
+      if (perm === "granted") { $("#pm").classList.remove("on"); return openFile(await p.handle.getFile(), p.handle); }
+    }
+  } catch (e) { console.warn(e); }
+  msg("Escolha o arquivo “" + p.fileName + "” de novo; as suas edições voltam sozinhas.", 6000); $("#pm").classList.remove("on"); pickPsd();
+}
+dbAll().then(l => { l.sort((x, y) => (y.updated || 0) - (x.updated || 0)); if (l[0]) { const b = $("#dropCont"); b.hidden = false; b.textContent = "Continuar: " + l[0].name; b.onclick = () => continuar(l[0]); } }).catch(() => {});
+$("#bProj").onclick = () => { $("#pm").classList.add("on"); renderProjects(); };
+$("#pc2").onclick = () => $("#pm").classList.remove("on");
 function save(c, name, type, q) { c.toBlob(b => { const a = document.createElement("a"); a.href = URL.createObjectURL(b); a.download = name; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 4000); }, type, q); }
 function exportSlide(i, type) {
   const s = doc.slides[i], c = renderSlide(s, 1);
