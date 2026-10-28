@@ -740,6 +740,7 @@ nav.top button{padding-left:2px;padding-right:2px;min-width:0}
     <div class="chips small" id="extraChips" style="margin-top:8px"></div>
     <label class="field"><span>Destaque (horário)</span><input type="text" class="tin" id="artHours" placeholder="Especialmente às 19h30"></label>
     <label class="field"><span>Endereço</span><input type="text" class="tin" id="artAddr" list="addrOpts" placeholder="R. XV de Novembro, 1360 - Planalto/Artur Nogueira"></label>
+    <label class="row" style="margin:2px 0 6px;gap:8px;align-items:center"><input type="checkbox" id="artNoH"> <span>Sem horário (deixar só o endereço)</span></label>
     <p class="muted" style="margin-top:-2px">Mudar aqui vale só para esta arte. A programação fixa fica no fim desta aba.</p>
 
     <h3>Proporção</h3>
@@ -2643,7 +2644,7 @@ const ART_FMTS = [
 ];
 const DIAS_CURTOS = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
 const PROG_KEY = "__programacao__";
-const TX_DEF = { txt: 58, addrTxt: 34, y: 5, xOff: 0 };
+const TX_DEF = { txt: 58, addrTxt: 34, y: 5, xOff: 0, ax: 0, ay: 0 };
 const artPref = LS.get("artPref", {});
 const art = { img: null, bg: null, bgSrc: null, bgToday: false,
   fmt: ART_FMTS.find(f => f.id === artPref.fmt) || ART_FMTS[0], zoom: 1, ox: 0, oy: 0,
@@ -2651,9 +2652,9 @@ const art = { img: null, bg: null, bgSrc: null, bgToday: false,
   cf: Object.assign({ z: 1, x: 0, y: 0 }, artPref.cf || {}),
   logoId: artPref.logoId || null, lg: Object.assign({ s: 11, x: .5, y: 2 }, artPref.lg || {}),
   upper: artPref.upper ?? true, txt: artPref.txt ?? TX_DEF.txt, addrTxt: artPref.addrTxt ?? TX_DEF.addrTxt,
-  y: artPref.y ?? TX_DEF.y, xOff: artPref.xOff ?? 0, shade: artPref.shade ?? 45,
+  y: artPref.y ?? TX_DEF.y, xOff: artPref.xOff ?? 0, ax: artPref.ax ?? 0, ay: artPref.ay ?? 0, noHours: false, shade: artPref.shade ?? 45,
   day: new Date().getDay(), extra: null, layer: "arte", mask: null, maskDirty: false, undo: [], brush: 50 };
-function saveArtPref(){ LS.set("artPref", { fmt: art.fmt.id, church: art.church, chOp: art.chOp, chH: art.chH, cf: art.cf, logoId: art.logoId, lg: art.lg, upper: art.upper, txt: art.txt, addrTxt: art.addrTxt, y: art.y, xOff: art.xOff, shade: art.shade }); }
+function saveArtPref(){ LS.set("artPref", { fmt: art.fmt.id, church: art.church, chOp: art.chOp, chH: art.chH, cf: art.cf, logoId: art.logoId, lg: art.lg, upper: art.upper, txt: art.txt, addrTxt: art.addrTxt, y: art.y, xOff: art.xOff, ax: art.ax, ay: art.ay, shade: art.shade }); }
 st.prog = { dias: Array.from({ length: 7 }, () => ({ h: "", a: "" })), extras: [] };
 function normProg(p){
   const dias = Array.isArray(p) ? p : (p && p.dias) || [];
@@ -2684,11 +2685,12 @@ function renderArtChips(){
   chipGroup($("#txtCase"), [[true, "MAIÚSCULAS"], [false, "Como digitado"]], () => art.upper, v => { art.upper = v; saveArtPref(); }, drawArt);
   syncArtSliders(); renderLayers();
 }
-const LAYERS = [["arte", "Arte"], ["igreja", "Igreja"], ["texto", "Texto"], ["logo", "Logo"], ["apagar", "Apagar"]];
+const LAYERS = [["arte", "Arte"], ["igreja", "Igreja"], ["texto", "Texto"], ["endereco", "Endereço"], ["logo", "Logo"], ["apagar", "Apagar"]];
 const LAYER_HINT = {
   arte: "Arraste para enquadrar. Dois dedos para zoom.",
   igreja: "Arraste a igreja. Dois dedos para zoom.",
   texto: "Arraste o texto. Dois dedos para aumentar ou diminuir.",
+  endereco: "Arraste só o endereço para onde quiser. Dois dedos para aumentar ou diminuir.",
   logo: "Arraste a logo. Dois dedos para aumentar ou diminuir.",
   apagar: "Pinte o que quer sumir. Melhor em coisas pequenas sobre fundo simples."
 };
@@ -2811,6 +2813,7 @@ bindRange("brush", v => v, v => { art.brush = v; });
 bindRange("artLogoSize", v => v + "%", v => { art.lg.s = v; saveArtPref(); drawArt(); });
 $("#artLogoReset").addEventListener("click", () => { art.lg = { s: art.lg.s, x: .5, y: 2 }; saveArtPref(); drawArt(); });
 $("#chReset").addEventListener("click", () => { art.cf = { z: 1, x: 0, y: 0 }; saveArtPref(); drawArt(); });
+$("#artNoH").addEventListener("change", e => { art.noHours = e.target.checked; drawArt(); });
 $("#txReset").addEventListener("click", () => { Object.assign(art, TX_DEF); saveArtPref(); syncArtSliders(); drawArt(); });
 ["artAddr", "artHours"].forEach(id => $("#" + id).addEventListener("input", e => { e.target.dataset.touched = 1; drawArt(); }));
 
@@ -2847,7 +2850,7 @@ function chBandH(){ return Math.round(art.fmt.h * art.chH / 100); }
     if (pts.size === 1){ g = { last: p, dist: 0 }; if (art.layer === "apagar"){ paint(p, p); drawArt(); } }
     else if (pts.size === 2 && g){
       const [a, b] = [...pts.values()]; g.dist = Math.hypot(a.x - b.x, a.y - b.y) || 1;
-      g.z0 = art.layer === "igreja" ? art.cf.z : art.layer === "logo" ? art.lg.s : art.layer === "texto" ? [art.txt, art.addrTxt] : art.zoom;
+      g.z0 = art.layer === "endereco" ? art.addrTxt : art.layer === "igreja" ? art.cf.z : art.layer === "logo" ? art.lg.s : art.layer === "texto" ? [art.txt, art.addrTxt] : art.zoom;
     }
   });
   cv.addEventListener("pointermove", e => {
@@ -2856,7 +2859,8 @@ function chBandH(){ return Math.round(art.fmt.h * art.chH / 100); }
     if (pts.size >= 2 && g.dist){
       if (art.layer === "apagar") return;
       const [a, b] = [...pts.values()], r = Math.hypot(a.x - b.x, a.y - b.y) / g.dist;
-      if (art.layer === "texto"){ art.txt = clamp(g.z0[0] * r, 20, 160); art.addrTxt = clamp(g.z0[1] * r, 14, 110); syncArtSliders(); }
+      if (art.layer === "endereco"){ art.addrTxt = clamp(g.z0 * r, 14, 110); syncArtSliders(); }
+      else if (art.layer === "texto"){ art.txt = clamp(g.z0[0] * r, 20, 160); art.addrTxt = clamp(g.z0[1] * r, 14, 110); syncArtSliders(); }
       else if (art.layer === "igreja") art.cf.z = clamp(g.z0 * r, .3, 4);
       else if (art.layer === "logo"){ art.lg.s = clamp(g.z0 * r, 3, 80); syncArtLogo(); }
       else art.zoom = clamp(g.z0 * r, 1, 4);
@@ -2864,6 +2868,7 @@ function chBandH(){ return Math.round(art.fmt.h * art.chH / 100); }
     }
     const dx = p.x - g.last.x, dy = p.y - g.last.y;
     if (art.layer === "apagar") paint(g.last, p);
+    else if (art.layer === "endereco"){ art.ax = clamp(art.ax + dx / art.fmt.w, -.6, .6); art.ay = clamp(art.ay - dy / art.fmt.h * 100, -90, 90); }
     else if (art.layer === "texto"){ art.xOff = clamp(art.xOff + dx / art.fmt.w, -.45, .45); art.y = clamp(art.y - dy / art.fmt.h * 100, -10, 92); }
     else if (art.layer === "igreja" && art.bg){ art.cf.x = clamp(art.cf.x + dx / art.fmt.w, -1, 1); art.cf.y = clamp(art.cf.y + dy / chBandH(), -1, 1); }
     else if (art.layer === "logo"){ art.lg.x = clamp(art.lg.x + dx / art.fmt.w, 0, 1); art.lg.y = clamp(art.lg.y - dy / art.fmt.h * 100, -5, 95); }
@@ -2878,7 +2883,8 @@ function chBandH(){ return Math.round(art.fmt.h * art.chH / 100); }
   cv.addEventListener("pointerup", up); cv.addEventListener("pointercancel", up);
   cv.addEventListener("wheel", e => {
     e.preventDefault(); const f = e.deltaY < 0 ? 1.06 : 1 / 1.06;
-    if (art.layer === "texto"){ art.txt = clamp(art.txt * f, 20, 160); art.addrTxt = clamp(art.addrTxt * f, 14, 110); syncArtSliders(); saveArtPref(); }
+    if (art.layer === "endereco"){ art.addrTxt = clamp(art.addrTxt * f, 14, 110); syncArtSliders(); saveArtPref(); }
+    else if (art.layer === "texto"){ art.txt = clamp(art.txt * f, 20, 160); art.addrTxt = clamp(art.addrTxt * f, 14, 110); syncArtSliders(); saveArtPref(); }
     else if (art.layer === "igreja"){ art.cf.z = clamp(art.cf.z * f, .3, 4); saveArtPref(); }
     else if (art.layer === "logo"){ art.lg.s = clamp(art.lg.s * f, 3, 80); syncArtLogo(); saveArtPref(); }
     else if (art.layer === "arte") art.zoom = clamp(art.zoom * f, 1, 4);
@@ -3023,7 +3029,7 @@ function renderArt(ctx, preview){
     ctx.save(); ctx.setLineDash([14 * k, 10 * k]); ctx.strokeStyle = "rgba(255,255,255,.8)"; ctx.lineWidth = 3 * k;
     ctx.strokeRect(4, 4, W - 8, chBandH() - 8); ctx.restore();
   }
-  let hl = $("#artHours").value.trim(), ad = $("#artAddr").value.trim();
+  let hl = art.noHours ? "" : $("#artHours").value.trim(), ad = $("#artAddr").value.trim();
   if (art.upper){ hl = hl.toLocaleUpperCase("pt-BR"); ad = ad.toLocaleUpperCase("pt-BR"); }
   if (!hl && !ad){ drawArtLogo(ctx, W, H, preview); return; }
   const maxW = W * .92;
@@ -3060,8 +3066,13 @@ function renderArt(ctx, preview){
   hL.forEach(l => { ctx.fillText(l, cx, y); y += hs * 1.12; });
   y += gap;
   ctx.font = "500 " + as + "px Oswald, 'Arial Narrow', sans-serif";
-  aL.forEach(l => { ctx.fillText(l, cx, y); y += as * 1.2; });
+  const axp = art.ax * W, ayp = -H * art.ay / 100, aTop = y + ayp;
+  aL.forEach(l => { ctx.fillText(l, cx + axp, y + ayp); y += as * 1.2; });
   ctx.restore();
+  if (preview && art.layer === "endereco" && aL.length){
+    ctx.save(); ctx.setLineDash([14 * k, 10 * k]); ctx.strokeStyle = "rgba(255,200,80,.95)"; ctx.lineWidth = 3 * k;
+    ctx.strokeRect(W * .03 + axp, aTop - 10 * k, W * .94, aL.length * as * 1.2 + 20 * k); ctx.restore();
+  }
   drawArtLogo(ctx, W, H, preview);
   if (preview && art.layer === "texto"){
     ctx.save(); ctx.setLineDash([14 * k, 10 * k]); ctx.strokeStyle = "rgba(255,255,255,.85)"; ctx.lineWidth = 3 * k;
