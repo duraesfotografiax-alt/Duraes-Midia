@@ -734,6 +734,8 @@ nav.top button{padding-left:2px;padding-right:2px;min-width:0}
     <div class="ptitle"><span class="ic"><svg class="i"><use href="#i-art"/></svg></span><h2>Arte do dia</h2></div>
     <p class="lead">Sobe a arte que chegou de São Paulo. A igreja entra ao fundo e o horário e o endereço do dia entram sozinhos.</p>
     <label class="btn primary filebtn big" style="width:100%"><svg class="i"><use href="#i-plus"/></svg>Escolher arte<input id="artIn" type="file" accept="image/*"></label>
+    <button class="btn" id="artPaste" style="width:100%;margin-top:8px">Colar arte copiada</button>
+    <p class="muted" style="margin:6px 0 0">Se a janela de escolher não abrir: abra a arte na galeria, toque em Copiar, volte aqui e toque em Colar arte copiada.</p>
 
     <h3>Dia da reunião</h3>
     <div class="days" id="dayChips"></div>
@@ -2803,6 +2805,15 @@ $("#artIn").addEventListener("change", async e => {
   try{ art.img = await fileToWork(f); art.zoom = 1; art.ox = 0; art.oy = 0; art.undo = []; resetMask(); drawArt(); sessSaveArt(); }
   catch(err){ toast("Não deu para abrir a arte"); }
 });
+async function artFromBlob(b){ try{ art.img = await fileToWork(new File([b], "arte.png", { type: b.type || "image/png" })); art.zoom = 1; art.ox = 0; art.oy = 0; art.undo = []; resetMask(); drawArt(); sessSaveArt(); toast("Arte colada", 1800); }catch(err){ toast("Não deu para abrir a arte"); } }
+$("#artPaste").addEventListener("click", async () => {
+  try{
+    const items = await navigator.clipboard.read();
+    for (const it of items){ const t = it.types.find(x => /^image\//.test(x)); if (t){ return artFromBlob(await it.getType(t)); } }
+    toast("Não achei imagem copiada. Copie a arte na galeria primeiro.", 3200);
+  }catch(err){ toast("O celular não deixou colar. Libere a colagem ou use Escolher arte.", 3600); }
+});
+document.addEventListener("paste", e => { const f = [...(e.clipboardData ? e.clipboardData.files : [])].find(x => /^image\//.test(x.type)); if (f && !/INPUT|TEXTAREA/.test((e.target.tagName || ""))) artFromBlob(f); });
 $("#artBgIn").addEventListener("change", async e => {
   const f = e.target.files[0]; e.target.value = ""; if (!f) return;
   try{ art.bg = await fileToWork(f); art.bgToday = true; if (art.church === "nao"){ art.church = "misturar"; } renderArtChips(); applyCfg(); }catch(err){ toast("Não deu para abrir a foto"); }
